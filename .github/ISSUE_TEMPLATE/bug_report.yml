@@ -1,0 +1,47 @@
+name: Bug report
+description: 报告可复现的问题
+title: "[Bug]: "
+labels: ["bug", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        感谢反馈。请不要上传真实 API Key、未脱敏日志或私人照片。
+  - type: textarea
+    id: summary
+    attributes:
+      label: 问题概述
+      description: 简短说明发生了什么。
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: 复现步骤
+      description: 写出从打开 App 到问题出现的步骤。
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: 预期行为
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: 实际行为
+    validations:
+      required: true
+  - type: dropdown
+    id: privacy-change
+    attributes:
+      label: 是否涉及照片、AI Provider、API Key 或网络请求
+      options:
+        - 不涉及
+        - 涉及照片读取或显示
+        - 涉及 AI Provider 或 API Key
+        - 涉及网络请求
+        - 不确定
+    validations:
+      required: true
