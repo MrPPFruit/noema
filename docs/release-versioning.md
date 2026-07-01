@@ -120,6 +120,21 @@ SHA256SUMS.txt
 - 签名密钥。
 - AAB。AAB 主要用于 Google Play，不适合 GitHub 用户直接安装。
 
+## Release Signing
+
+官方 GitHub Release 必须使用 release signing，不上传 debug-signed APK。
+
+本地签名配置使用 Flutter / Android 常见的 `android/key.properties`，该文件被 `android/.gitignore` 排除，不进入公开仓库：
+
+```properties
+storePassword=...
+keyPassword=...
+keyAlias=...
+storeFile=...
+```
+
+没有 `android/key.properties` 时，Gradle 会回退到 debug signing，让贡献者仍然可以本地运行 `flutter build apk --release`。这个回退产物只能用于本地验证，不能上传到官方 release。
+
 ## 历史说明
 
 公开前内部 alpha 线：

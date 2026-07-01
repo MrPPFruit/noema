@@ -11,6 +11,7 @@
 - 是否上传 APK。
 - 是否需要 signed tag。
 - 是否仍使用 `v0.1.0-beta.1` 作为首次公开版本。
+- 本机是否已准备 `android/key.properties` 和对应 release keystore。
 
 ## 本地验证
 
@@ -47,3 +48,5 @@ shasum -a 256 noema-android-vX.Y.Z-release.apk
 ```
 
 release notes 应包含 APK 文件名、SHA256、Android package name 和已知限制。
+
+如果没有 `android/key.properties`，`flutter build apk --release` 可能仍可产出本地 debug-signed release 包；该产物不能上传到官方 GitHub Release。
