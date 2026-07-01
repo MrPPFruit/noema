@@ -47,7 +47,7 @@ Noema 用一组单字组织照片整理路径：
 | `境` | 旅程成境 | 已实现 | 为一段旅程建立本地影像空间 |
 | `入` | 选择入境 | 已实现 | 用户主动选择照片，创建或追加到当前空间 |
 | `观` | 全貌展开 | 已实现 | 照片墙浏览、密度切换、多选移除和大图查看 |
-| `甄` | 相近取舍 | 已实现 | 快速筛选、对照甄、相似组辅助和撤销 |
+| `甄` | 甄别取舍 | 已实现 | 处理相似、连拍或待确认照片组，在当前 `境` 内做保留 / 出境取舍 |
 | `赏` | 安静回看 | 已实现 | 从照片墙进入的沉浸式 Viewer |
 | `鉴` | 评片札记 | 首版可用 | 本机分档、珍藏、单张 / 系列 AI 品鉴和结果持久化 |
 | `赋` | 模型入笔 | 首版可用 | 用户自行配置 Provider、Base URL、Model 和 API Key |
@@ -70,9 +70,9 @@ Noema 不做这些事：
   <img src="docs/assets/showcase/showcase-theme-dual.png" alt="Noema dark and light themes" width="900">
 </p>
 
-| 赏 | 鉴：单张 | 鉴：系列 | 赋 |
-|---|---|---|---|
-| <img src="docs/assets/showcase/showcase-appreciate-detail.png" alt="Noema appreciate viewer" width="220"> | <img src="docs/assets/showcase/showcase-appraise-detail.png" alt="Noema single photo appraisal" width="220"> | <img src="docs/assets/showcase/showcase-appraise-series.png" alt="Noema series appraisal" width="220"> | <img src="docs/assets/showcase/showcase-ai-settings.png" alt="Noema AI settings" width="220"> |
+| 甄 | 赏 | 鉴：单张 | 鉴：系列 | 赋 |
+|---|---|---|---|---|
+| <img src="docs/assets/showcase/play-04-zhen.png" alt="Noema cull and compare flow" width="170"> | <img src="docs/assets/showcase/showcase-appreciate-detail.png" alt="Noema appreciate viewer" width="170"> | <img src="docs/assets/showcase/showcase-appraise-detail.png" alt="Noema single photo appraisal" width="170"> | <img src="docs/assets/showcase/showcase-appraise-series.png" alt="Noema series appraisal" width="170"> | <img src="docs/assets/showcase/showcase-ai-settings.png" alt="Noema AI settings" width="170"> |
 
 更多发布素材：
 
@@ -84,15 +84,14 @@ Noema 不做这些事：
 
 ## 隐私与 AI
 
-Noema 的默认整理流程发生在用户设备上。只有用户主动配置 AI Provider、Base URL、Model 和 API Key，并触发 `鉴` 的 AI 品鉴时，相关照片数据才会发送到用户选择的 Provider。
+Noema 没有自建账号、云同步或中转服务。默认整理流程发生在用户设备上；只有用户主动配置 AI Provider、Base URL、Model 和 API Key，并触发 `鉴` 的 AI 品鉴时，相关照片数据才会直接发送到用户选择的 Provider。
 
 | 行为 | 默认发生 | 说明 |
 |---|---:|---|
-| 本机导入和整理 | 是 | 用户主动选择照片后进行 |
+| 本机导入和整理 | 是 | 用户主动选择照片后在设备上进行 |
 | 后台全图库扫描 | 否 | 不在启动后默认扫描整机照片 |
 | 自动删除原照片 | 否 | Noema 不替用户删除系统相册原图 |
 | AI Provider 请求 | 否 | 只在用户主动配置并触发时发生 |
-| 作者服务器转发 | 否 | AI 请求不经过作者服务器 |
 
 更多细节：
 
@@ -104,13 +103,13 @@ Noema 的默认整理流程发生在用户设备上。只有用户主动配置 A
 
 ## 下载
 
-公开 APK 已发布。只建议从官方 GitHub Releases 下载：
+公开 Android 测试包已发布。只建议从官方 GitHub Releases 下载：
 
 - [Noema 0.1 Beta 1](https://github.com/MrPPFruit/noema/releases/tag/v0.1.0-beta.1)
 
 公开 release 会提供：
 
-- APK 文件名。
+- Android 安装包。
 - Android package name：`com.mrppfruit.noema`。
 - SHA256 校验信息。
 - 版本说明和已知限制。
