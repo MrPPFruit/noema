@@ -4,6 +4,7 @@
 
 ## Unreleased
 
+- 发布 `v0.1.0-beta.1` 后同步 README 当前状态与下载入口。
 - 更新 GitHub README 首页为 `Noema / 境语` 品牌叙事。
 - 增加 `docs/assets/showcase/` 产品展示图与 32 秒竖版预览视频。
 - 补充 Android release signing 配置和发布阻断说明。

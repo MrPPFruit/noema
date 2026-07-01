@@ -10,7 +10,7 @@
 
 <p align="center">
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MPL--2.0-blue.svg" alt="MPL-2.0"></a>
-  <img src="https://img.shields.io/badge/status-public%20beta%20preparing-orange" alt="public beta preparing">
+  <img src="https://img.shields.io/badge/status-public%20beta-orange" alt="public beta">
   <img src="https://img.shields.io/badge/platform-Android%20first-brightgreen" alt="Android first">
   <img src="https://img.shields.io/badge/built%20with-Flutter-02569B?logo=flutter" alt="Flutter">
 </p>
@@ -27,12 +27,12 @@ English: Give each journey a quiet order before memory turns into noise.
 
 ## 当前状态
 
-Noema 正在准备首次公开 beta：
+Noema 的首次公开 beta 已发布：
 
 - 首次公开版本线：`v0.1.0-beta.1`
 - Release 类型：GitHub pre-release
 - 当前平台重点：Android first，iOS 保持工程支持
-- 当前 release：尚未发布公开 APK
+- 当前 release：[Noema 0.1 Beta 1](https://github.com/MrPPFruit/noema/releases/tag/v0.1.0-beta.1)
 - Android package name：`com.mrppfruit.noema`
 - 官方仓库：[github.com/MrPPFruit/noema](https://github.com/MrPPFruit/noema)
 
@@ -104,9 +104,9 @@ Noema 的默认整理流程发生在用户设备上。只有用户主动配置 A
 
 ## 下载
 
-公开 APK 尚未发布。发布后只建议从官方 GitHub Releases 下载：
+公开 APK 已发布。只建议从官方 GitHub Releases 下载：
 
-- [Noema Releases](https://github.com/MrPPFruit/noema/releases)
+- [Noema 0.1 Beta 1](https://github.com/MrPPFruit/noema/releases/tag/v0.1.0-beta.1)
 
 公开 release 会提供：
 
