@@ -23,7 +23,7 @@ English: Give each journey a quiet order before memory turns into noise.
 
 ## 快速链接
 
-[当前状态](#当前状态) · [体验路径](#体验路径) · [产品展示](#产品展示) · [隐私与-ai](#隐私与-ai) · [下载](#下载) · [构建](#构建) · [贡献](#贡献)
+[当前状态](#当前状态) · [体验路径](#体验路径) · [产品展示](#产品展示) · [隐私与-ai](#隐私与-ai) · [下载](#下载) · [开发者](#开发者) · [贡献](#贡献)
 
 ## 当前状态
 
@@ -115,9 +115,11 @@ Noema 的默认整理流程发生在用户设备上。只有用户主动配置 A
 - SHA256 校验信息。
 - 版本说明和已知限制。
 
-如果后续进入 Google Play、F-Droid 或其他渠道，会在 README 和 release notes 中明确说明。
+目前没有其他官方下载渠道。如果未来增加 Google Play、F-Droid 或其他渠道，会在 README 和 release notes 中明确说明。
 
-## 构建
+## 开发者
+
+普通试用请优先从 GitHub Releases 下载官方 APK。下面命令面向希望本地检查、构建或提交 PR 的开发者：
 
 ```bash
 flutter pub get
@@ -142,14 +144,14 @@ flutter build apk --release
 这个公开仓库不包含：
 
 - 私有开发仓库历史。
-- 内部项目管理过程文档。
-- 本地构建输出、验证日志和 agent 工具产物。
+- 私有项目管理记录、执行日志和 agent 工具产物。
+- 本地构建输出与验证日志。
 - 私人旅行照片源文件或示例照片目录。
 - keystore、证书、真实 API Key、token 或本机路径配置。
 
 ## 贡献
 
-早期公开阶段优先欢迎：
+早期公开阶段优先接受 issue 和小范围 PR：
 
 - 可复现 bug report。
 - 测试用例。
@@ -157,7 +159,7 @@ flutter build apk --release
 - 隐私、权限、构建和发布验证问题。
 - 小范围 UI 文案和可访问性改进。
 
-大型产品方向、云同步、账号系统、追踪分析、广告 SDK、默认上传照片等改动，需要先开 issue 讨论。
+大型产品方向、云同步、账号系统、追踪分析、广告 SDK、默认上传照片等改动，不适合直接提交 PR；如确有必要，请先开 issue 说明动机、隐私边界和实现影响。
 
 请阅读 [CONTRIBUTING.md](CONTRIBUTING.md) 和 [SECURITY.md](SECURITY.md)。
 
@@ -167,6 +169,6 @@ flutter build apk --release
 - Noema / 境语名称、Logo、图标、截图、商店素材、包名和 bundle id：不随 MPL-2.0 授权，见 [TRADEMARKS.md](TRADEMARKS.md)。
 - 第三方依赖、字体、图标和产品展示素材：见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
 
-## 支持开发
+## 支持与反馈
 
-未来可以通过 GitHub Sponsors 支持独立开源开发。Sponsor 不代表购买商业 SLA、定制开发、优先修复或长期维护承诺。
+当前阶段最有价值的支持是试用公开 beta、提交可复现问题、补充文档、审查隐私 / 网络边界，或验证构建与 release 包。
