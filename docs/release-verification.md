@@ -31,6 +31,8 @@ flutter build apk --release
 
 ## 产品展示素材验证
 
+- 公开展示素材目录：`docs/assets/showcase/`。
+- README 首屏图、截图 strip、主题图、`赏 / 鉴 / 赋` 细节图和竖版预览视频均能在 GitHub 页面打开。
 - 字体许可证。
 - 图标原创性和品牌边界。
 - 公开仓库不包含私人旅行照片源文件或示例素材目录。

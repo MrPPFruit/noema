@@ -1,45 +1,56 @@
 <p align="center">
-  <img src="android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png" alt="Noema app icon" width="120">
+  <img src="docs/assets/showcase/github-readme-hero.png" alt="Noema product preview" width="900">
 </p>
 
-# Noema
+<h1 align="center">Noema / 境语</h1>
 
-[![License: MPL-2.0](https://img.shields.io/badge/license-MPL--2.0-blue.svg)](LICENSE)
-![Status](https://img.shields.io/badge/status-public%20beta%20preparing-orange)
-![Platform](https://img.shields.io/badge/platform-Android%20first-brightgreen)
-![Flutter](https://img.shields.io/badge/built%20with-Flutter-02569B?logo=flutter)
+<p align="center">
+  让照片回到它发生的地方。
+</p>
 
-Noema 是一个本地优先的移动端私人照片整理工作台，目标是帮助用户在自己的设备上完成快速筛选、沉浸浏览和可选的 AI 品鉴。
+<p align="center">
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MPL--2.0-blue.svg" alt="MPL-2.0"></a>
+  <img src="https://img.shields.io/badge/status-public%20beta%20preparing-orange" alt="public beta preparing">
+  <img src="https://img.shields.io/badge/platform-Android%20first-brightgreen" alt="Android first">
+  <img src="https://img.shields.io/badge/built%20with-Flutter-02569B?logo=flutter" alt="Flutter">
+</p>
 
-English: Noema is a local-first mobile photo curation workbench for private photo review, selection, browsing, and optional AI-assisted appraisal.
+境语（Noema）是一处本地优先的私人影像空间，帮你把一段旅程整理成有取舍、有回看、有注解的照片脉络。
+
+English: Give each journey a quiet order before memory turns into noise.
 
 > 算法辅助，用户做最终审美决定。
 
 ## 快速链接
 
-[当前状态](#当前状态) · [功能](#noema-做什么) · [隐私与 AI](#隐私与-ai-边界) · [截图](#产品截图) · [下载](#下载) · [构建](#构建) · [贡献](#贡献)
+[当前状态](#当前状态) · [体验路径](#体验路径) · [产品展示](#产品展示) · [隐私与-ai](#隐私与-ai) · [下载](#下载) · [构建](#构建) · [贡献](#贡献)
 
 ## 当前状态
 
 Noema 正在准备首次公开 beta：
 
 - 首次公开版本线：`v0.1.0-beta.1`
+- Release 类型：GitHub pre-release
 - 当前平台重点：Android first，iOS 保持工程支持
 - 当前 release：尚未发布公开 APK
 - Android package name：`com.mrppfruit.noema`
 - 官方仓库：[github.com/MrPPFruit/noema](https://github.com/MrPPFruit/noema)
 
-公开 beta 不是稳定版。它适合早期试用、反馈问题和审查隐私 / 构建 / 发布链路，不代表已经进入 `1.0.0`。
+公开 beta 适合早期试用、问题反馈和隐私 / 构建 / 发布链路审查，不代表已经进入稳定版或 `1.0.0`。
 
-## Noema 做什么
+## 体验路径
 
-| 模块 | 状态 | 说明 |
-|---|---|---|
-| `入` Import | 已实现 | 用户主动选择照片，创建或追加到一个本地整理空间 |
-| `观` Observe | 已实现 | 照片墙浏览、密度切换、多选移除和大图查看 |
-| `甄` Cull | 已实现 | 快速筛选、对照甄、相似组辅助和撤销 |
-| `赏` Appreciate | 已实现 | 从 `观` 进入的沉浸式照片 Viewer |
-| `鉴` Appraise | 首版可用 | 本机分档、珍藏、单张 / 系列 AI 品鉴和结果持久化 |
+Noema 用一组单字组织照片整理路径：
+
+| 字 | 名称 | 当前状态 | 说明 |
+|---|---|---|---|
+| `境` | 旅程成境 | 已实现 | 为一段旅程建立本地影像空间 |
+| `入` | 选择入境 | 已实现 | 用户主动选择照片，创建或追加到当前空间 |
+| `观` | 全貌展开 | 已实现 | 照片墙浏览、密度切换、多选移除和大图查看 |
+| `甄` | 相近取舍 | 已实现 | 快速筛选、对照甄、相似组辅助和撤销 |
+| `赏` | 安静回看 | 已实现 | 从照片墙进入的沉浸式 Viewer |
+| `鉴` | 评片札记 | 首版可用 | 本机分档、珍藏、单张 / 系列 AI 品鉴和结果持久化 |
+| `赋` | 模型入笔 | 首版可用 | 用户自行配置 Provider、Base URL、Model 和 API Key |
 
 Noema 不做这些事：
 
@@ -49,7 +60,29 @@ Noema 不做这些事：
 - 不提供内置 AI API Key。
 - 不把公开仓库当作照片素材包或二创模板。
 
-## 隐私与 AI 边界
+## 产品展示
+
+<p align="center">
+  <img src="docs/assets/showcase/github-screenshot-strip.png" alt="Noema screenshots" width="900">
+</p>
+
+<p align="center">
+  <img src="docs/assets/showcase/showcase-theme-dual.png" alt="Noema dark and light themes" width="900">
+</p>
+
+| 赏 | 鉴：单张 | 鉴：系列 | 赋 |
+|---|---|---|---|
+| <img src="docs/assets/showcase/showcase-appreciate-detail.png" alt="Noema appreciate viewer" width="220"> | <img src="docs/assets/showcase/showcase-appraise-detail.png" alt="Noema single photo appraisal" width="220"> | <img src="docs/assets/showcase/showcase-appraise-series.png" alt="Noema series appraisal" width="220"> | <img src="docs/assets/showcase/showcase-ai-settings.png" alt="Noema AI settings" width="220"> |
+
+更多发布素材：
+
+- [GitHub cover card](docs/assets/showcase/github-cover-card.png)
+- [Play feature graphic](docs/assets/showcase/play-feature-graphic.png)
+- [Portrait preview video](docs/assets/showcase/noema-preview-portrait-32s.mp4)
+
+这些展示图来自真实 App 截图或录屏帧。公开仓库不会发布原始私人照片文件。
+
+## 隐私与 AI
 
 Noema 的默认整理流程发生在用户设备上。只有用户主动配置 AI Provider、Base URL、Model 和 API Key，并触发 `鉴` 的 AI 品鉴时，相关照片数据才会发送到用户选择的 Provider。
 
@@ -63,33 +96,11 @@ Noema 的默认整理流程发生在用户设备上。只有用户主动配置 A
 
 更多细节：
 
+- [隐私说明](PRIVACY.md)
 - [隐私架构](docs/privacy-architecture.md)
 - [AI Provider 与 API Key](docs/ai-provider-and-api-key.md)
 - [网络请求](docs/network-requests.md)
 - [发布验证](docs/release-verification.md)
-
-## 权限与网络
-
-| 项目 | 当前公开准备状态 |
-|---|---|
-| 照片访问 | 通过系统 Photo Picker / 用户主动选择进入 Noema 工作流 |
-| 原图处理 | 不自动删除系统相册原图，不把公开仓库作为照片素材包 |
-| 网络请求 | 默认整理流程不需要作者服务器；AI 请求只在用户主动配置并触发时发生 |
-| API Key | 由用户自行输入，保存在设备安全存储中；公开仓库和官方 release 不内置密钥 |
-| Release 验证 | 发布 APK 时提供文件名、package name、SHA256 和已知限制 |
-
-## 产品截图
-
-产品截图和短视频会随 `v0.1.0-beta.1` 发布前补充。公开展示素材会来自真实 App 截图或录屏帧，不会发布原始私人照片文件。
-
-计划补充的公开展示图：
-
-- 首页 / 工作空间入口。
-- `入` 导入与命名。
-- `观` 照片墙。
-- `甄` 快速筛选。
-- `赏` 沉浸式查看。
-- `鉴` 本机分档与可选 AI 品鉴。
 
 ## 下载
 
@@ -97,7 +108,7 @@ Noema 的默认整理流程发生在用户设备上。只有用户主动配置 A
 
 - [Noema Releases](https://github.com/MrPPFruit/noema/releases)
 
-请不要从未知转载链接下载 APK。公开 release 会提供：
+公开 release 会提供：
 
 - APK 文件名。
 - Android package name：`com.mrppfruit.noema`。
@@ -125,14 +136,13 @@ flutter build apk --release
 
 - Flutter App 主体源码。
 - Android / iOS / Web 工程文件。
-- 字体和 Noema 图标资产。
+- 字体、图标和 Noema 品牌资产。
 - 用户向文档、隐私说明、网络请求说明、贡献指南和安全政策。
 
 这个公开仓库不包含：
 
 - 私有开发仓库历史。
-- 内部 OpenSpec / Superpowers 过程文档。
-- 旧 Tauri archive。
+- 内部项目管理过程文档。
 - 本地构建输出、验证日志和 agent 工具产物。
 - 私人旅行照片源文件或示例照片目录。
 - keystore、证书、真实 API Key、token 或本机路径配置。
@@ -154,7 +164,7 @@ flutter build apk --release
 ## 许可与品牌
 
 - 源码：Mozilla Public License 2.0，见 [LICENSE](LICENSE)。
-- Noema 名称、Logo、图标、截图、商店素材、包名和 bundle id：不随 MPL-2.0 授权，见 [TRADEMARKS.md](TRADEMARKS.md)。
+- Noema / 境语名称、Logo、图标、截图、商店素材、包名和 bundle id：不随 MPL-2.0 授权，见 [TRADEMARKS.md](TRADEMARKS.md)。
 - 第三方依赖、字体、图标和产品展示素材：见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
 
 ## 支持开发

@@ -4,6 +4,8 @@
 
 ## Unreleased
 
+- 更新 GitHub README 首页为 `Noema / 境语` 品牌叙事。
+- 增加 `docs/assets/showcase/` 产品展示图与 32 秒竖版预览视频。
 - 整理公开仓库 README、隐私、安全、贡献、品牌和第三方声明草案。
 - 修正 Noema 当前叙事为“移动端私人照片整理工作台 + 可选 AI 品鉴”。
 - 修正 AI Key UI 文案，使其与设备安全存储行为一致。
