@@ -5,7 +5,7 @@
 ## 1. 状态
 
 - 当前状态：有效规范，持续维护。
-- 当前产品主线：Flutter 移动应用，Android / Samsung 优先验证，iOS 保持支持。
+- 当前产品主线：Flutter 移动应用，Android / Samsung 优先验证；其他平台不作为当前公开发布目标。
 - Home / `境` 页：Flutter 版本已完成真实本地 `境` 列表、进入 `观`、删除确认和创建入口；如需调整，先更新本规格、页面规格或 OpenSpec 任务。
 - Import / `入` 页：Flutter 创建 / 追加 `境` 初版已基本完成，Android 走轻量媒体管线。当前 Android 导入保留系统 Photo Picker，第一次导入时申请图库读取权限用于本地索引、缩略图预热和派生图恢复；后续不要把它重新改回 picker 中转页、自研图库浏览器或整理入口。
 - Observe / `观` 页：Flutter 主视图已落地，包含真实比例照片墙、真实时间排序、密度 / 双指缩放、追加照片、多选移除、境名编辑、照片查看器、系统返回规则和 `甄 / 赏 / 鉴` 的 `intent-seal` 底部意图轴。
@@ -36,7 +36,7 @@
 2. 阅读本文件和相关页面规格。
 3. 复用既有 VI、字体、图标、布局、动效和交互规则。
 4. 新页面、新组件、新视觉规则、新交互或新动效确认后，先同步文档，再实施或最小范围同步实现。
-5. UI 实现采用 Flutter-first：直接在 Flutter 中开发，用 Flutter Web 浏览器预览快速迭代，再用 Android `emulator-5556` 或真机复核平台差异。
+5. UI 实现采用 Flutter-first：直接在 Flutter 中开发，用 Android `emulator-5556` 或真机快速迭代并复核平台差异。
 6. 不把重要 UI 决策只留在代码、截图、聊天记录或本地记忆中。
 
 ## 3. 产品体验基调
@@ -99,7 +99,7 @@ Flutter 实现必须依赖打包字体资产，而不是平台 fallback。
 
 - 英文 `Noema` wordmark：`NoemaLatin`，资产为 `assets/fonts/CormorantGaramond.ttf`，来源 Cormorant Garamond，OFL 授权。
 - 中文展示文字：`Luo`，Flutter 字体资产为 `assets/fonts/Luo-Regular.ttf`。
-- `assets/fonts/Luo-Regular.woff2` 仅作为 HTML / Web 原型参考资产保留；Flutter 原生和 Web 构建都注册 ttf，避免 Android 回退系统中文字体。
+- `assets/fonts/Luo-Regular.woff2` 仅作为历史 HTML 原型参考资产保留；Flutter 原生构建注册 ttf，避免 Android 回退系统中文字体。
 - 大型中文主题字、Home 中文 `境` 名称等使用 `Luo`。
 - Import 等页面的英文展示型输入占位可使用 `NoemaLatin`，避免英文 copy 回落到系统 sans 或被中文字体撑宽。
 - 普通操作标签、辅助文字、按钮文字、照片数量、tooltip 和系统状态只要包含中文，都必须显式使用 `Luo`。纯英文界面可使用页面规格指定的 `NoemaLatin` 或平台 UI 字体。
@@ -133,7 +133,7 @@ vi.dark.surfaceGlass      半透明深炭色
 
 - 正式页面必须保持同一套页面骨架：移动端主画布最大宽度、背景、顶部品牌锚点和主动作位置应统一。
 - 正式页面必须使用同一套场景度量和色调来源；顶部 `Noema` 的高度、中心点、背景渐变和 light / dark / auto 色调不能由各页面硬编码分叉。
-- Flutter Web 预览时，Home / `境`、Import / `入`、Observe / `观` 等核心页面都应收进同一手机画布，不允许一个页面居中窄屏、另一个页面横向铺满浏览器。
+- 预览时，Home / `境`、Import / `入`、Observe / `观` 等核心页面都应收进同一手机画布，不允许一个页面居中窄屏、另一个页面横向铺满宽视口。
 - `Noema` wordmark 是跨页面品牌锚点，默认在顶部居中。左右工具按钮通过占位或 Stack 布局保持它不被推偏。
 - 页面主动作优先使用底部方形玻璃签按钮。创建、导入、确认和一字体验入口等同一层级动作应共用方形玻璃表面、固定命中区、中心对齐和克制阴影，不在不同页面随意改成另一种按钮体系。
 - 无照片、无可执行对象或上下文未满足时，不必为了版式平衡强行显示确认按钮；空态应优先保留一个明确的添加入口。
@@ -246,7 +246,7 @@ Home 不应出现：
 已确认数据与存储组件：
 
 - `NoemaMediaPicker`：Android 轻量媒体桥，返回 URI 和真实元数据，缩略图 / 大预览按需生成。
-- `NoemaLocalStore`：本地 JSON snapshot store，保存 workspace 列表、当前 workspace、照片元数据、预览路径和决策状态；Web 使用 localStorage，原生端使用应用文件目录。
+- `NoemaLocalStore`：本地 JSON snapshot store，保存 workspace 列表、当前 workspace、照片元数据、预览路径和决策状态；Android 使用应用文件目录。
 
 已确认 Cull / `甄` 组件：
 
@@ -385,7 +385,7 @@ flutter test
 Home 或平台可见 UI 变更还应补充：
 
 ```text
-flutter run -d web-server --web-hostname 127.0.0.1 --web-port 5173
+flutter run -d emulator-5556
 flutter build apk --debug
 ```
 

@@ -31,7 +31,7 @@
 当前 Noema UI 文档必须围绕 Flutter-first 主线组织：
 
 - 新 UI 和视觉精修直接进入 Flutter。
-- Flutter Web 浏览器预览用于快速迭代和截图对照。
+- Android 模拟器或真机预览用于快速迭代和截图对照。
 - Android `emulator-5556` 用于移动端复核。
 - HTML 原型只能作为历史参考或设计讨论材料，不作为迁移实现主流程。
 - Flutter Home / `境`、Import / `入`、Observe / `观` 主体验已基本完成；Cull / `甄` 的快甄和对照甄已完成首轮实装；Appraise / `鉴` 已进入正式首版工作台。文档应固化现状和复核规则，不推动继续扩展已确认页面。

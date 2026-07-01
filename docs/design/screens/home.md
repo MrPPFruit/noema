@@ -131,7 +131,7 @@ sort: 近
 - `境` 名称使用 `Luo`，保持与主题字一致的中文气质。
 - 普通 tooltip、辅助文案、对话框正文和按钮可使用平台 UI 字体。
 
-不能依赖 Android / iOS / macOS 系统字体 fallback 来“碰巧”接近设计。
+不能依赖系统字体 fallback 来“碰巧”接近设计。
 
 ## 5. 布局基线
 
@@ -290,7 +290,7 @@ flutter test test/features/home/home_screen_test.dart test/app/navigation_flow_t
 视觉复核：
 
 ```text
-flutter run -d web-server --web-hostname 127.0.0.1 --web-port 5173
+flutter run -d emulator-5556
 ```
 
 移动端复核：

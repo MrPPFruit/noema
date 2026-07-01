@@ -31,7 +31,7 @@ Noema 的首次公开 beta 已发布：
 
 - 首次公开版本线：`v0.1.0-beta.1`
 - Release 类型：GitHub pre-release
-- 当前平台重点：Android first，iOS 保持工程支持
+- 当前公开平台：Android
 - 当前 release：[Noema 0.1 Beta 1](https://github.com/MrPPFruit/noema/releases/tag/v0.1.0-beta.1)
 - Android package name：`com.mrppfruit.noema`
 - 官方仓库：[github.com/MrPPFruit/noema](https://github.com/MrPPFruit/noema)
@@ -115,7 +115,7 @@ Noema 的默认整理流程发生在用户设备上。只有用户主动配置 A
 - SHA256 校验信息。
 - 版本说明和已知限制。
 
-目前没有其他官方下载渠道。如果未来增加 Google Play、F-Droid 或其他渠道，会在 README 和 release notes 中明确说明。
+目前没有其他官方下载渠道。
 
 ## 开发者
 
@@ -128,7 +128,7 @@ flutter test
 flutter build apk --release
 ```
 
-发布构建还需要 release signing。不要上传 debug APK、未签名 APK、签名密钥、keystore 或本机 `local.properties`。
+官方发布包由维护者签名，并在 GitHub Release 中提供校验信息。
 
 版本号规则见 [docs/release-versioning.md](docs/release-versioning.md)。
 
@@ -137,7 +137,7 @@ flutter build apk --release
 这个公开仓库包含：
 
 - Flutter App 主体源码。
-- Android / iOS / Web 工程文件。
+- Android 工程文件。
 - 字体、图标和 Noema 品牌资产。
 - 用户向文档、隐私说明、网络请求说明、贡献指南和安全政策。
 
@@ -159,7 +159,7 @@ flutter build apk --release
 - 隐私、权限、构建和发布验证问题。
 - 小范围 UI 文案和可访问性改进。
 
-大型产品方向、云同步、账号系统、追踪分析、广告 SDK、默认上传照片等改动，不适合直接提交 PR；如确有必要，请先开 issue 说明动机、隐私边界和实现影响。
+明显改变产品方向、隐私边界、联网行为或发布平台的改动，不适合直接提交大型 PR；如确有必要，请先开 issue 说明动机和影响。
 
 请阅读 [CONTRIBUTING.md](CONTRIBUTING.md) 和 [SECURITY.md](SECURITY.md)。
 

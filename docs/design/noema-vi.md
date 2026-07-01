@@ -58,13 +58,13 @@ Noema 使用一字主题作为页面精神锚点：
 - 来源：Cormorant Garamond，OFL 授权
 - 用途：`Noema` wordmark
 
-`Noema` wordmark 应小、安静、优雅，不做大品牌口号式展示。不得依赖 Android / iOS / macOS 系统字体 fallback。
+`Noema` wordmark 应小、安静、优雅，不做大品牌口号式展示。不得依赖系统字体 fallback。
 
 ### 中文展示文字
 
 - Flutter 字体族：`Luo`
 - Flutter 字体资产：`assets/fonts/Luo-Regular.ttf`
-- `assets/fonts/Luo-Regular.woff2` 仅作为 HTML / Web 原型参考资产保留
+- `assets/fonts/Luo-Regular.woff2` 仅作为历史 HTML 原型参考资产保留
 - 用途：大型主题字、Home `境` 名称、需要延续 VI 气质的中文展示文字
 
 普通操作标签、辅助信息、按钮文字和数字只要包含中文，就必须显式使用 `Luo`；纯图标工具和纯英文 UI 可使用页面规格指定的字体或平台 UI 字体，保持移动端清晰度。

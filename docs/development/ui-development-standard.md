@@ -14,8 +14,8 @@ Noema UI 开发采用 Flutter-first 流程：
 2. 先阅读 `docs/design/ui-design-spec.md`、`docs/design/noema-vi.md` 和相关页面规格，确认页面的视觉方向、交互规则和已批准的 VI 原则。
 3. 制作 UI 前检查 GSAP 动效参考和 COSS UI 组件参考，并把适用结论写入页面规格或设计文档。
 4. 直接在 Flutter 中实现 UI，不再先制作独立 HTML 原型再迁移。
-5. 使用 Flutter Web 作为快速预览与视觉迭代入口。
-6. 视觉确认后，再使用 Android `emulator-5556` 或真机做平台复核。
+5. 使用 Android 模拟器或真机作为预览与视觉迭代入口。
+6. 视觉确认后，再使用打包安装做平台复核。
 7. 完成后同步检查相关功能逻辑和文档索引，避免规范、设计和实现脱节。
 
 HTML 仅可作为历史参考或临时设计说明，不应再作为可迁移实现层。
@@ -31,31 +31,25 @@ HTML 仅可作为历史参考或临时设计说明，不应再作为可迁移实
 
 因此，从当前阶段开始，UI 迭代应在最终技术栈 Flutter 中完成。禁止把 HTML 原型当作“先实现、再迁移”的主流程；如确需保留 HTML，只能放在设计参考或历史说明中，并明确它不是实现来源。
 
-## 3. Flutter Web 预览
+## 3. Android 预览
 
-普通 UI 精修优先使用 Flutter Web 浏览器预览：
-
-```text
-flutter run -d chrome
-```
-
-如需固定端口，使用：
+普通 UI 精修优先使用 Android 模拟器或真机预览：
 
 ```text
-flutter run -d web-server --web-hostname 127.0.0.1 --web-port 5173
+flutter run -d emulator-5556
 ```
 
-Flutter Web 预览用于快速确认：
+Android 预览用于快速确认：
 
 - 字体是否来自已打包资产。
 - 图标尺寸、坐标和视觉中心是否正确。
 - 页面布局、间距、层级、背景和动效是否接近设计规范。
 - 设置面板、列数切换、排序、长按状态等交互是否可用。
-- 页面在浏览器中是否可快速复现问题，便于截图、对照和迭代。
+- 页面是否可快速复现问题，便于截图、对照和迭代。
 
 ## 4. 移动端复核
 
-Flutter Web 通过后，再做移动端复核。当前项目约定：
+快速预览通过后，再做移动端复核。当前项目约定：
 
 - 不再使用 `emulator-5554`，避免与其他项目抢占资源。
 - 默认使用 `emulator-5556` 做 Android 模拟器验证。
@@ -75,7 +69,7 @@ Flutter Web 通过后，再做移动端复核。当前项目约定：
 
 - 使用 `Luo`。
 - Flutter 字体资产：`assets/fonts/Luo-Regular.ttf`。
-- `assets/fonts/Luo-Regular.woff2` 仅作为 HTML / Web 原型参考资产保留；Flutter 原生和 Web 构建都必须注册 ttf，避免 Android 回退系统中文字体。
+- `assets/fonts/Luo-Regular.woff2` 仅作为历史 HTML 原型参考资产保留；Flutter 原生构建必须注册 ttf，避免 Android 回退系统中文字体。
 - 只要可见文本或 tooltip 包含中文，就必须显式使用 `Luo`，包括照片数量里的 `张`、一字功能入口和轻提示。
 - Flutter 全局 Theme 必须保留 `fontFamilyFallback: ['Luo']`，确保系统 Tooltip、旧占位页或遗漏显式字体的中文在 Android 上仍优先使用 Luo。
 - 中文不应依赖系统 fallback 来达成设计效果。
@@ -85,12 +79,12 @@ Flutter Web 通过后，再做移动端复核。当前项目约定：
 - 使用 `NoemaLatin`。
 - 字体资产：`assets/fonts/CormorantGaramond.ttf`。
 - 来源为 Google Fonts 的 Cormorant Garamond，OFL 授权。
-- 用于 `Noema` wordmark，避免依赖 Android / iOS / macOS 系统字体 fallback。
+- 用于 `Noema` wordmark，避免依赖系统字体 fallback。
 - 文档中可写作 `NoemaLatin / Cormorant Garamond`，但 Flutter 代码里应优先引用已注册的 `NoemaLatin` 字体族。
 
 字体检查要求：
 
-- Flutter Web 预览必须确认字体来自打包资产，而不是系统默认字体。
+- Android 预览必须确认字体来自打包资产，而不是系统默认字体。
 - Android `emulator-5556` 复核必须确认英文 wordmark 与中文展示文字没有 fallback 走样。
 - 设计规格、开发规范和实现中的字体命名必须保持一致。
 
@@ -105,7 +99,7 @@ Flutter Web 通过后，再做移动端复核。当前项目约定：
 
 ## 7. 布局对齐规范
 
-- 核心页面必须共享统一手机画布规则。Flutter Web 预览中，Home / `境`、Import / `入`、Observe / `观` 等页面应保持同一最大宽度、居中方式和背景边界。
+- 核心页面必须共享统一手机画布规则。预览中，Home / `境`、Import / `入`、Observe / `观` 等页面应保持同一最大宽度、居中方式和背景边界。
 - 核心页面必须复用统一 scene metrics 和 palette。不得在单个页面内重新硬编码顶部高度、安全区偏移、背景渐变或色调色值，除非页面规格明确批准。
 - `Noema` wordmark 默认作为顶部居中品牌锚点；左右图标按钮不得把它挤偏。若右侧有工具、左侧无工具，应通过 Stack / 占位保持视觉中心。
 - 返回、设置、取消等顶部图标按钮的视觉盒必须与页面主内容边界对齐；为了触控可让点击热区略微外扩，但玻璃背景或可见圆形不能比内容列更靠内。
@@ -131,7 +125,7 @@ Flutter Web 通过后，再做移动端复核。当前项目约定：
 - 固定格式元素必须有稳定尺寸，避免 hover、选中、加载、长文本或图标状态导致布局跳动。
 - 文字不得和按钮、图标、卡片、网格或安全区重叠。
 - 移动端复核时必须检查状态栏、导航栏和安全区对首屏布局的影响。
-- 浏览器预览通过不等于移动端通过；涉及首屏、字体、触控区域和平台 chrome 的变更必须在 `emulator-5556` 上复核。
+- 快速预览通过不等于发布验证通过；涉及首屏、字体、触控区域和平台 chrome 的变更必须在 `emulator-5556` 或真机上复核。
 
 ## 8. UI 参考检查规范
 
