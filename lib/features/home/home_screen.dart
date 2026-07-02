@@ -18,11 +18,14 @@ enum _AlbumSort { modified, name, time }
 enum _SortDirection { asc, desc }
 
 const _createJingHeroTag = 'noema-create-jing-action';
-const _homeTopBarTop = NoemaSceneMetrics.topBarTop;
 const _homeActionRowTop = 48.0;
 const _homeOptionsSheetTop =
-    _homeTopBarTop + _homeActionRowTop + NoemaSceneMetrics.iconTapSize + 8.0;
+    NoemaSceneMetrics.topBarTop +
+    _homeActionRowTop +
+    NoemaSceneMetrics.iconTapSize +
+    8.0;
 const _homePhotoWallTop = 150.0;
+const _homeEmptyStateTop = 208.0;
 const _homeTopBarHeight = _homeActionRowTop + NoemaSceneMetrics.iconVisualSize;
 
 typedef _HomeToneMode = NoemaToneMode;
@@ -101,6 +104,9 @@ class _HomeScreenState extends State<HomeScreen> {
         final resolvedTone = _appearanceController.resolveTone(context);
         final palette = _HomePalette.fromTone(resolvedTone);
         final albums = _orderedAlbums;
+        final sceneLayout = NoemaSceneMetrics.layoutOf(context);
+        final topBarTop = sceneLayout.topBarTop;
+        final topShift = sceneLayout.topSafeShift;
 
         return Scaffold(
           body: NoemaSceneFrame(
@@ -111,7 +117,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 Positioned(
                   left: -16,
                   right: -16,
-                  top: _homePhotoWallTop,
+                  top: _homePhotoWallTop + topShift,
                   bottom: 0,
                   child: _AlbumScrollWindow(
                     palette: palette,
@@ -125,21 +131,21 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 if (albums.isEmpty)
                   Positioned(
-                    left: NoemaSceneMetrics.sideInset,
-                    right: NoemaSceneMetrics.sideInset,
-                    top: 208,
+                    left: sceneLayout.sideInset,
+                    right: sceneLayout.sideInset,
+                    top: _homeEmptyStateTop + topShift,
                     bottom: 144,
                     child: _HomeEmptyState(palette: palette),
                   ),
                 Positioned(
-                  left: NoemaSceneMetrics.markLeft,
+                  left: sceneLayout.markLeft,
                   top: NoemaSceneMetrics.markTop,
                   child: NoemaThemeMark(palette: palette, mark: '境'),
                 ),
                 Positioned(
-                  left: 28,
-                  right: 28,
-                  top: _homeTopBarTop,
+                  left: sceneLayout.topBarInset,
+                  right: sceneLayout.topBarInset,
+                  top: topBarTop,
                   child: _TopBar(
                     palette: palette,
                     toneMode: _appearanceController.toneMode,
@@ -164,8 +170,8 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   ),
                 Positioned(
-                  right: NoemaSceneMetrics.sideInset,
-                  top: _homeOptionsSheetTop,
+                  right: sceneLayout.sideInset,
+                  top: _homeOptionsSheetTop + topShift,
                   child: _OptionsSheet(
                     palette: palette,
                     open: _optionsOpen,
@@ -404,7 +410,7 @@ class _AlbumScrollWindow extends StatelessWidget {
                   columns,
                   constraints.maxWidth,
                 );
-                final rows = (albums.length / columns).ceil();
+                final rows = (albums.length / metrics.columns).ceil();
                 final height =
                     metrics.paddingTop +
                     rows * metrics.itemHeight +
@@ -1548,63 +1554,97 @@ class _GridMetrics {
   double get itemHeight => coverHeight + labelGap + labelLine;
 
   factory _GridMetrics.forColumns(int columns, double width) {
-    final columnGap = switch (columns) {
+    final requestedColumns = columns.clamp(2, 4);
+    final columnGap = switch (requestedColumns) {
       2 => 34.0,
       3 => 18.0,
       _ => 10.0,
     };
-    final coverScale = switch (columns) {
+    final coverScale = switch (requestedColumns) {
       2 => 1.0,
       3 => 0.92,
       _ => 0.86,
     };
-    final cellWidth = (width - (columns - 1) * columnGap) / columns;
+    final resolvedColumns = _resolvedAlbumColumns(
+      requestedColumns,
+      width: width,
+      columnGap: columnGap,
+      coverScale: coverScale,
+    );
+    final cellWidth =
+        (width - (resolvedColumns - 1) * columnGap) / resolvedColumns;
     final coverWidth = cellWidth * coverScale;
 
     return _GridMetrics(
-      columns: columns,
+      columns: resolvedColumns,
       cellWidth: cellWidth,
       coverWidth: coverWidth,
       coverHeight: coverWidth * 0.82 / 1.12,
       columnGap: columnGap,
-      rowGap: switch (columns) {
+      rowGap: switch (requestedColumns) {
         2 => 30.0,
         3 => 28.0,
         _ => 23.0,
       },
-      paddingTop: switch (columns) {
+      paddingTop: switch (requestedColumns) {
         2 => 64.0,
         3 => 62.0,
         _ => 60.0,
       },
       paddingBottom: 118,
-      labelSize: switch (columns) {
+      labelSize: switch (requestedColumns) {
         2 => 18.0,
         3 => 15.0,
         _ => 13.0,
       },
-      labelLine: switch (columns) {
+      labelLine: switch (requestedColumns) {
         2 => 22.0,
         3 => 19.0,
         _ => 17.0,
       },
-      labelGap: switch (columns) {
+      labelGap: switch (requestedColumns) {
         2 => 12.0,
         3 => 9.0,
         _ => 7.0,
       },
-      stackSpread: switch (columns) {
+      stackSpread: switch (requestedColumns) {
         2 => 1.0,
         3 => 0.48,
         _ => 0.28,
       },
-      stackRotate: switch (columns) {
+      stackRotate: switch (requestedColumns) {
         2 => 1.0,
         3 => 0.58,
         _ => 0.38,
       },
     );
   }
+}
+
+int _resolvedAlbumColumns(
+  int requestedColumns, {
+  required double width,
+  required double columnGap,
+  required double coverScale,
+}) {
+  if (width < NoemaSceneMetrics.tabletBreakpoint) {
+    return requestedColumns;
+  }
+  final maxCoverWidth = switch (requestedColumns) {
+    2 => 168.0,
+    3 => 136.0,
+    _ => 112.0,
+  };
+  var resolvedColumns = requestedColumns;
+  while (resolvedColumns < 8) {
+    final cellWidth =
+        (width - (resolvedColumns - 1) * columnGap) / resolvedColumns;
+    if (cellWidth * coverScale <= maxCoverWidth) {
+      break;
+    }
+    resolvedColumns++;
+  }
+  return resolvedColumns;
 }
 
 class _Album {

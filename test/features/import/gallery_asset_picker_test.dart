@@ -94,4 +94,80 @@ void main() {
       debugDefaultTargetPlatformOverride = null;
     }
   });
+
+  testWidgets(
+    'iOS import uses native picker without pre-requesting library access',
+    (tester) async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+
+      const channel = MethodChannel(noemaMediaPickerChannelName);
+      final calls = <MethodCall>[];
+      tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(channel, (
+        call,
+      ) async {
+        calls.add(call);
+        return switch (call.method) {
+          'pickImages' => [
+            {
+              'uri': 'ios-phasset-local-id',
+              'id': 'ios-phasset-local-id',
+              'name': 'IMG_0008.HEIC',
+              'width': 4032,
+              'height': 3024,
+            },
+          ],
+          _ => null,
+        };
+      });
+      addTearDown(
+        () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+          channel,
+          null,
+        ),
+      );
+
+      try {
+        await tester.pumpWidget(const SizedBox());
+        final assets = await pickGalleryAssets(
+          tester.element(find.byType(SizedBox)),
+        );
+
+        expect(assets.single.sourceUri, 'ios-phasset-local-id');
+        expect(calls.map((call) => call.method), ['pickImages']);
+        expect(calls.single.arguments['limit'], galleryPickerLimit);
+      } finally {
+        debugDefaultTargetPlatformOverride = null;
+      }
+    },
+  );
+
+  testWidgets('iOS import does not fallback when native channel is missing', (
+    tester,
+  ) async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+
+    const channel = MethodChannel(noemaMediaPickerChannelName);
+    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(channel, (
+      _,
+    ) async {
+      throw MissingPluginException('No implementation found');
+    });
+    addTearDown(
+      () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        channel,
+        null,
+      ),
+    );
+
+    try {
+      await tester.pumpWidget(const SizedBox());
+
+      await expectLater(
+        pickGalleryAssets(tester.element(find.byType(SizedBox))),
+        throwsA(isA<MissingPluginException>()),
+      );
+    } finally {
+      debugDefaultTargetPlatformOverride = null;
+    }
+  });
 }

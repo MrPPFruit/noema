@@ -212,9 +212,9 @@ void main() {
     await tester.tap(find.byTooltip('清除出境'));
     await _pumpCullUi(tester);
 
-    expect(find.text('处理出境照片'), findsOneWidget);
+    expect(find.text('从此境移除'), findsOneWidget);
     expect(find.text('只从此境移除'), findsOneWidget);
-    expect(find.text('移除并删除 Noema 本地数据'), findsOneWidget);
+    expect(find.text('删除手机相册原图'), findsOneWidget);
 
     await tester.tap(find.text('只从此境移除'));
     await tester.pump();
@@ -228,16 +228,30 @@ void main() {
     tester,
   ) async {
     final deletedPaths = <String>[];
+    final deletedUris = <String>[];
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(
           const MethodChannel(noemaMediaPickerChannelName),
           (call) async {
+            if (call.method == 'galleryAccessStatus') {
+              return 'full';
+            }
             if (call.method == 'deleteCachedFiles') {
               final arguments = call.arguments as Map<Object?, Object?>;
               final paths = (arguments['paths'] as List<Object?>)
                   .cast<String>();
               deletedPaths.addAll(paths);
               return paths.length;
+            }
+            if (call.method == 'deleteMediaItems') {
+              final arguments = call.arguments as Map<Object?, Object?>;
+              final uris = (arguments['uris'] as List<Object?>).cast<String>();
+              deletedUris.addAll(uris);
+              return <String, Object?>{
+                'deleted': true,
+                'count': uris.length,
+                'cancelled': false,
+              };
             }
             return null;
           },
@@ -256,6 +270,7 @@ void main() {
       SelectedGalleryAsset(
         id: 'asset-1',
         name: 'Photo 1',
+        sourceUri: 'content://media/external/images/media/1',
         thumbnailPath: '/data/noema_media/thumbs/photo-1.jpg',
         width: 3024,
         height: 4032,
@@ -264,6 +279,7 @@ void main() {
       SelectedGalleryAsset(
         id: 'asset-2',
         name: 'Photo 2',
+        sourceUri: 'content://media/external/images/media/2',
         thumbnailPath: '/data/noema_media/thumbs/photo-2.jpg',
         width: 3024,
         height: 4032,
@@ -272,6 +288,7 @@ void main() {
       SelectedGalleryAsset(
         id: 'asset-3',
         name: 'Photo 3',
+        sourceUri: 'content://media/external/images/media/3',
         thumbnailPath: '/data/noema_media/thumbs/photo-3.jpg',
         width: 3024,
         height: 4032,
@@ -280,6 +297,7 @@ void main() {
       SelectedGalleryAsset(
         id: 'asset-4',
         name: 'Photo 4',
+        sourceUri: 'content://media/external/images/media/4',
         thumbnailPath: '/data/noema_media/thumbs/photo-4.jpg',
         width: 3024,
         height: 4032,
@@ -298,12 +316,12 @@ void main() {
     );
     await _pumpCullUi(tester);
 
-    expect(find.text('处理已完成丢弃'), findsOneWidget);
-    expect(find.textContaining('将从此境移除已完成组中标记丢弃的 1 张照片'), findsOneWidget);
+    expect(find.text('从此境移除'), findsOneWidget);
+    expect(find.textContaining('将处理已完成组中标记丢弃的 1 张照片'), findsOneWidget);
     expect(find.text('只从此境移除'), findsOneWidget);
-    expect(find.text('移除并删除 Noema 本地数据'), findsOneWidget);
+    expect(find.text('删除手机相册原图'), findsOneWidget);
 
-    await tester.tap(find.text('移除并删除 Noema 本地数据'));
+    await tester.tap(find.text('删除手机相册原图'));
     await tester.pump();
     await tester.idle();
 
@@ -315,6 +333,7 @@ void main() {
       controller.decisions['photo-3']?.decision,
       Decision.reviewForRemoval,
     );
+    expect(deletedUris, ['content://media/external/images/media/2']);
     expect(deletedPaths, contains('/data/noema_media/thumbs/photo-2.jpg'));
     expect(
       deletedPaths,

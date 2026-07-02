@@ -15,6 +15,7 @@ import 'package:noema/core/models/photo_asset.dart';
 import 'package:noema/core/models/similar_group.dart';
 import 'package:noema/core/ui/noema_scene.dart';
 import 'package:noema/core/widgets/noema_image_cache.dart';
+import 'package:noema/core/widgets/noema_remove_assets_dialog.dart';
 import 'package:noema/core/widgets/recoverable_review_image.dart';
 import 'package:noema/core/workflow/review_workspace.dart';
 import 'package:noema/core/workflow/review_workspace_controller.dart';
@@ -189,6 +190,9 @@ class _ReviewGroupsScreenState extends State<ReviewGroupsScreen> {
         final palette = NoemaPalette.fromTone(
           _appearanceController.resolveTone(context),
         );
+        final sceneLayout = NoemaSceneMetrics.layoutOf(context);
+        final topBarTop = sceneLayout.topBarTop;
+        final topShift = sceneLayout.topSafeShift;
         final workspace = widget.workspaceController.workspace;
         final groups = _groupsFor(workspace);
         final hasGroups = groups.isNotEmpty;
@@ -226,23 +230,23 @@ class _ReviewGroupsScreenState extends State<ReviewGroupsScreen> {
                       clipBehavior: Clip.none,
                       children: [
                         Positioned(
-                          left: NoemaSceneMetrics.markLeft,
+                          left: sceneLayout.markLeft,
                           top: NoemaSceneMetrics.markTop,
                           child: NoemaThemeMark(palette: palette, mark: '甄'),
                         ),
                         Positioned(
-                          left: NoemaSceneMetrics.topBarInset,
-                          right: NoemaSceneMetrics.topBarInset,
-                          top: NoemaSceneMetrics.topBarTop,
+                          left: sceneLayout.topBarInset,
+                          right: sceneLayout.topBarInset,
+                          top: topBarTop,
                           child: _CullTopBar(
                             palette: palette,
                             onBack: () => context.go(NoemaRoutes.observe),
                           ),
                         ),
                         Positioned(
-                          left: NoemaSceneMetrics.sideInset,
-                          right: NoemaSceneMetrics.sideInset,
-                          top: _cullModeContentTop,
+                          left: sceneLayout.sideInset,
+                          right: sceneLayout.sideInset,
+                          top: _cullModeContentTop + topShift,
                           bottom: _cullModeContentBottom,
                           child: hasGroups
                               ? _CullHome(
@@ -309,11 +313,8 @@ class _ReviewGroupsScreenState extends State<ReviewGroupsScreen> {
                                 setState(() => _clearConfirmOpen = true),
                             onCloseClearConfirm: () =>
                                 setState(() => _clearConfirmOpen = false),
-                            onClearOutPhotos: (photos, deleteLocalData) =>
-                                _clearOutPhotos(
-                                  photos,
-                                  deleteLocalData: deleteLocalData,
-                                ),
+                            onClearOutPhotos: (photos, choice) =>
+                                _clearOutPhotos(photos, choice: choice),
                           ),
                         if (_activeMode != null && group != null)
                           _CullModeOverlay(
@@ -349,7 +350,7 @@ class _ReviewGroupsScreenState extends State<ReviewGroupsScreen> {
                     !_detailOpen &&
                     _previewPhoto == null)
                   Positioned(
-                    right: NoemaSceneMetrics.sideInset,
+                    right: sceneLayout.sideInset,
                     top: NoemaSceneMetrics.bodyTop + 18,
                     height: NoemaSceneMetrics.topBarHeight,
                     child: Center(
@@ -373,12 +374,12 @@ class _ReviewGroupsScreenState extends State<ReviewGroupsScreen> {
                   _CompletedOutConfirmOverlay(
                     palette: palette,
                     strings: strings,
-                    count: completedOutPhotos.length,
+                    photos: completedOutPhotos,
                     onCancel: () =>
                         setState(() => _clearCompletedConfirmOpen = false),
-                    onConfirm: (deleteLocalData) => _clearCompletedOutPhotos(
+                    onConfirm: (choice) => _clearCompletedOutPhotos(
                       completedOutPhotos,
-                      deleteLocalData: deleteLocalData,
+                      choice: choice,
                     ),
                   ),
               ],
@@ -566,15 +567,24 @@ class _ReviewGroupsScreenState extends State<ReviewGroupsScreen> {
     return photosById.values.toList(growable: false);
   }
 
-  void _clearOutPhotos(
+  Future<void> _clearOutPhotos(
     List<_CullPhotoView> photos, {
-    required bool deleteLocalData,
-  }) {
+    required NoemaRemoveChoice choice,
+  }) async {
     final ids = {for (final photo in photos) photo.id};
     if (ids.isEmpty) {
       setState(() => _clearConfirmOpen = false);
       return;
     }
+    final removed = await removeNoemaAssetsWithChoice(
+      context: context,
+      workspaceController: widget.workspaceController,
+      photoIds: ids,
+      choice: choice,
+    );
+    if (!removed || !mounted) {
+      return;
+    }
     setState(() {
       _clearConfirmOpen = false;
       _detailOpen = false;
@@ -582,19 +592,24 @@ class _ReviewGroupsScreenState extends State<ReviewGroupsScreen> {
       _previewPhoto = null;
       _statusOverrides.removeWhere((photoId, _) => ids.contains(photoId));
     });
-    widget.workspaceController.removeAssetsByIds(
-      ids,
-      deleteCachedFiles: deleteLocalData,
-    );
   }
 
-  void _clearCompletedOutPhotos(
+  Future<void> _clearCompletedOutPhotos(
     List<_CullPhotoView> photos, {
-    required bool deleteLocalData,
-  }) {
+    required NoemaRemoveChoice choice,
+  }) async {
     final ids = {for (final photo in photos) photo.id};
     if (ids.isEmpty) {
       setState(() => _clearCompletedConfirmOpen = false);
+      return;
+    }
+    final removed = await removeNoemaAssetsWithChoice(
+      context: context,
+      workspaceController: widget.workspaceController,
+      photoIds: ids,
+      choice: choice,
+    );
+    if (!removed || !mounted) {
       return;
     }
     setState(() {
@@ -604,10 +619,6 @@ class _ReviewGroupsScreenState extends State<ReviewGroupsScreen> {
       _previewPhoto = null;
       _statusOverrides.removeWhere((photoId, _) => ids.contains(photoId));
     });
-    widget.workspaceController.removeAssetsByIds(
-      ids,
-      deleteCachedFiles: deleteLocalData,
-    );
   }
 }
 
@@ -2385,7 +2396,7 @@ class _CullDetailPanel extends StatelessWidget {
   final ValueChanged<_CullPhotoView> onPreviewPhoto;
   final VoidCallback onOpenClearConfirm;
   final VoidCallback onCloseClearConfirm;
-  final void Function(List<_CullPhotoView> photos, bool deleteLocalData)
+  final void Function(List<_CullPhotoView> photos, NoemaRemoveChoice choice)
   onClearOutPhotos;
 
   @override
@@ -2496,8 +2507,8 @@ class _CullDetailPanel extends StatelessWidget {
                               strings: strings,
                               outPhotos: outPhotos,
                               onCancel: onCloseClearConfirm,
-                              onConfirm: (deleteLocalData) =>
-                                  onClearOutPhotos(outPhotos, deleteLocalData),
+                              onConfirm: (choice) =>
+                                  onClearOutPhotos(outPhotos, choice),
                             ),
                         ],
                       ),
@@ -2707,6 +2718,14 @@ class _DetailStatusBadge extends StatelessWidget {
   }
 }
 
+bool _canDeleteSystemPhotos(List<_CullPhotoView> photos) {
+  return photos.isNotEmpty &&
+      photos.every((photo) {
+        final sourceUri = photo.asset?.photo.sourceUri;
+        return sourceUri != null && sourceUri.trim().isNotEmpty;
+      });
+}
+
 Color _detailStatusColor(_CullStatus status, NoemaPalette palette) {
   return switch (status) {
     _CullStatus.keep => const Color(0xFF73D99A),
@@ -2729,10 +2748,11 @@ class _ClearConfirmSheet extends StatelessWidget {
   final NoemaStrings strings;
   final List<_CullPhotoView> outPhotos;
   final VoidCallback onCancel;
-  final ValueChanged<bool> onConfirm;
+  final ValueChanged<NoemaRemoveChoice> onConfirm;
 
   @override
   Widget build(BuildContext context) {
+    final canDeleteSystemPhoto = _canDeleteSystemPhotos(outPhotos);
     return Positioned.fill(
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
@@ -2748,75 +2768,17 @@ class _ClearConfirmSheet extends StatelessWidget {
               onTap: () {},
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 304),
-                child: _GlassPanel(
+                child: NoemaRemoveAssetsDialog(
                   palette: palette,
-                  radius: BorderRadius.circular(20),
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 20, 20, 18),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Expanded(
-                              child: Text(
-                                strings.cullClearOutTitle,
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                  color: palette.ink,
-                                  fontFamily: 'LXGWWenKaiGB',
-                                  fontFamilyFallback: const [
-                                    'NoemaCjkFallback',
-                                  ],
-                                  fontSize: 17,
-                                  letterSpacing: 0,
-                                  height: 1.25,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            NoemaGlassIconButton(
-                              palette: palette,
-                              tooltip: strings.close,
-                              icon: Icons.close_rounded,
-                              onPressed: onCancel,
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          strings.cullClearConfirm(outPhotos.length),
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            color: palette.ink.withValues(alpha: 0.9),
-                            fontFamily: 'LXGWWenKaiGB',
-                            fontFamilyFallback: const ['NoemaCjkFallback'],
-                            fontSize: 13,
-                            letterSpacing: 0,
-                            height: 1.4,
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        _CullRemoveChoiceButton(
-                          palette: palette,
-                          label: strings.removeFromSpaceOnly,
-                          icon: Icons.link_off_rounded,
-                          onPressed: () => onConfirm(false),
-                        ),
-                        const SizedBox(height: 8),
-                        _CullRemoveChoiceButton(
-                          palette: palette,
-                          label: strings.removeAndDeleteLocalData,
-                          icon: Icons.delete_outline_rounded,
-                          danger: true,
-                          onPressed: () => onConfirm(true),
-                        ),
-                      ],
-                    ),
-                  ),
+                  bodyText: canDeleteSystemPhoto
+                      ? strings.cullClearConfirm(outPhotos.length)
+                      : strings.removeSystemPhotoUnavailable,
+                  canDeleteSystemPhoto: canDeleteSystemPhoto,
+                  onCancel: onCancel,
+                  onRemoveFromSpace: () =>
+                      onConfirm(NoemaRemoveChoice.indexOnly),
+                  onRemoveAndDeleteSystemPhoto: () =>
+                      onConfirm(NoemaRemoveChoice.deleteSystemPhoto),
                 ),
               ),
             ),
@@ -2831,20 +2793,59 @@ class _CompletedOutConfirmOverlay extends StatelessWidget {
   const _CompletedOutConfirmOverlay({
     required this.palette,
     required this.strings,
-    required this.count,
+    required this.photos,
     required this.onCancel,
     required this.onConfirm,
   });
 
   final NoemaPalette palette;
   final NoemaStrings strings;
-  final int count;
+  final List<_CullPhotoView> photos;
   final VoidCallback onCancel;
-  final ValueChanged<bool> onConfirm;
+  final ValueChanged<NoemaRemoveChoice> onConfirm;
 
   @override
   Widget build(BuildContext context) {
+    final count = photos.length;
+    final canDeleteSystemPhoto = _canDeleteSystemPhotos(photos);
     final hasPhotos = count > 0;
+    if (hasPhotos) {
+      return Positioned.fill(
+        key: const ValueKey('review-groups-completed-clear-confirm-overlay'),
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: onCancel,
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              color: Colors.black.withValues(
+                alpha: palette.tone == NoemaTone.dark ? 0.32 : 0.24,
+              ),
+            ),
+            child: Center(
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: () {},
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 318),
+                  child: NoemaRemoveAssetsDialog(
+                    palette: palette,
+                    bodyText: canDeleteSystemPhoto
+                        ? strings.cullClearCompletedConfirm(count)
+                        : strings.removeSystemPhotoUnavailable,
+                    canDeleteSystemPhoto: canDeleteSystemPhoto,
+                    onCancel: onCancel,
+                    onRemoveFromSpace: () =>
+                        onConfirm(NoemaRemoveChoice.indexOnly),
+                    onRemoveAndDeleteSystemPhoto: () =>
+                        onConfirm(NoemaRemoveChoice.deleteSystemPhoto),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+    }
     return Positioned.fill(
       key: const ValueKey('review-groups-completed-clear-confirm-overlay'),
       child: GestureDetector(
@@ -2876,9 +2877,7 @@ class _CompletedOutConfirmOverlay extends StatelessWidget {
                           children: [
                             Expanded(
                               child: Text(
-                                hasPhotos
-                                    ? strings.cullClearCompletedTitle
-                                    : strings.cullClearCompletedOut,
+                                strings.cullClearCompletedOut,
                                 maxLines: 2,
                                 overflow: TextOverflow.ellipsis,
                                 style: TextStyle(
@@ -2904,9 +2903,7 @@ class _CompletedOutConfirmOverlay extends StatelessWidget {
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          hasPhotos
-                              ? strings.cullClearCompletedConfirm(count)
-                              : strings.cullClearCompletedEmpty,
+                          strings.cullClearCompletedEmpty,
                           textAlign: TextAlign.center,
                           style: TextStyle(
                             color: palette.ink.withValues(alpha: 0.9),
@@ -2917,23 +2914,6 @@ class _CompletedOutConfirmOverlay extends StatelessWidget {
                             height: 1.4,
                           ),
                         ),
-                        if (hasPhotos) ...[
-                          const SizedBox(height: 16),
-                          _CullRemoveChoiceButton(
-                            palette: palette,
-                            label: strings.removeFromSpaceOnly,
-                            icon: Icons.link_off_rounded,
-                            onPressed: () => onConfirm(false),
-                          ),
-                          const SizedBox(height: 8),
-                          _CullRemoveChoiceButton(
-                            palette: palette,
-                            label: strings.removeAndDeleteLocalData,
-                            icon: Icons.delete_outline_rounded,
-                            danger: true,
-                            onPressed: () => onConfirm(true),
-                          ),
-                        ],
                       ],
                     ),
                   ),
@@ -2942,51 +2922,6 @@ class _CompletedOutConfirmOverlay extends StatelessWidget {
             ),
           ),
         ),
-      ),
-    );
-  }
-}
-
-class _CullRemoveChoiceButton extends StatelessWidget {
-  const _CullRemoveChoiceButton({
-    required this.palette,
-    required this.label,
-    required this.icon,
-    required this.onPressed,
-    this.danger = false,
-  });
-
-  final NoemaPalette palette;
-  final String label;
-  final IconData icon;
-  final VoidCallback onPressed;
-  final bool danger;
-
-  @override
-  Widget build(BuildContext context) {
-    final foreground = danger
-        ? (palette.tone == NoemaTone.dark
-              ? const Color(0xFFE1A39B)
-              : const Color(0xFF8D3028))
-        : palette.ink;
-
-    return FilledButton.tonalIcon(
-      onPressed: onPressed,
-      icon: Icon(icon, size: 18),
-      label: Text(label, textAlign: TextAlign.center),
-      style: FilledButton.styleFrom(
-        foregroundColor: foreground,
-        backgroundColor: foreground.withValues(
-          alpha: palette.tone == NoemaTone.dark ? 0.12 : 0.08,
-        ),
-        textStyle: const TextStyle(
-          fontFamily: 'LXGWWenKaiGB',
-          fontFamilyFallback: ['NoemaCjkFallback'],
-          fontSize: 13,
-          height: 1.2,
-        ),
-        minimumSize: const Size.fromHeight(46),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
       ),
     );
   }
@@ -3020,6 +2955,9 @@ class _CullModeOverlay extends StatefulWidget {
 class _CullModeOverlayState extends State<_CullModeOverlay> {
   @override
   Widget build(BuildContext context) {
+    final sceneLayout = NoemaSceneMetrics.layoutOf(context);
+    final topBarTop = sceneLayout.topBarTop;
+    final topShift = sceneLayout.topSafeShift;
     final fast = widget.mode == _CullMode.fast;
     final modeContent = fast
         ? _FastCullMode(
@@ -3046,23 +2984,23 @@ class _CullModeOverlayState extends State<_CullModeOverlay> {
           clipBehavior: Clip.none,
           children: [
             Positioned(
-              left: NoemaSceneMetrics.markLeft,
+              left: sceneLayout.markLeft,
               top: NoemaSceneMetrics.markTop,
               child: NoemaThemeMark(palette: widget.palette, mark: '甄'),
             ),
             Positioned(
-              left: NoemaSceneMetrics.topBarInset,
-              right: NoemaSceneMetrics.topBarInset,
-              top: NoemaSceneMetrics.topBarTop,
+              left: sceneLayout.topBarInset,
+              right: sceneLayout.topBarInset,
+              top: topBarTop,
               child: _CullTopBar(
                 palette: widget.palette,
                 onBack: widget.onClose,
               ),
             ),
             Positioned(
-              left: NoemaSceneMetrics.sideInset,
-              right: NoemaSceneMetrics.sideInset,
-              top: _cullModeContentTop,
+              left: sceneLayout.sideInset,
+              right: sceneLayout.sideInset,
+              top: _cullModeContentTop + topShift,
               bottom: _cullModeContentBottom,
               child: modeContent,
             ),

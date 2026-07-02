@@ -25,6 +25,20 @@ const _noemaWorkspaceCaptureMetadataRefreshItemGap = Duration(milliseconds: 64);
 
 enum ReviewWorkspaceImportResult { applied, empty, unchanged, tooManyPhotos }
 
+class NoemaSystemPhotoDeleteUnavailableException implements Exception {
+  const NoemaSystemPhotoDeleteUnavailableException();
+
+  @override
+  String toString() => 'NoemaSystemPhotoDeleteUnavailableException';
+}
+
+class NoemaSystemPhotoDeletePermissionDeniedException implements Exception {
+  const NoemaSystemPhotoDeletePermissionDeniedException();
+
+  @override
+  String toString() => 'NoemaSystemPhotoDeletePermissionDeniedException';
+}
+
 class ReviewWorkspaceScaleSnapshot {
   const ReviewWorkspaceScaleSnapshot({
     required this.workspaceCount,
@@ -422,6 +436,66 @@ class ReviewWorkspaceController extends ChangeNotifier {
     }
     _persistSoon();
     notifyListeners();
+  }
+
+  Future<bool> removeAssetsByIdsAfterSystemDelete(Set<String> photoIds) async {
+    final activeWorkspace = _activeWorkspace;
+    if (activeWorkspace == null || photoIds.isEmpty) {
+      return false;
+    }
+    final targetAssets = activeWorkspace.assets
+        .where((asset) => photoIds.contains(asset.photo.id))
+        .toList(growable: false);
+    if (targetAssets.isEmpty) {
+      return false;
+    }
+    final hasMissingSource = targetAssets.any((asset) {
+      final sourceUri = asset.photo.sourceUri;
+      return sourceUri == null || sourceUri.trim().isEmpty;
+    });
+    if (hasMissingSource) {
+      throw const NoemaSystemPhotoDeleteUnavailableException();
+    }
+
+    final sourceUris = {
+      for (final asset in targetAssets) asset.photo.sourceUri!.trim(),
+    };
+    await _ensureGalleryAccessForSystemDelete();
+    final deleted = await _mediaPicker.deleteSystemMediaItems(sourceUris);
+    if (!deleted) {
+      return false;
+    }
+    removeAssetsByIds({
+      for (final asset in targetAssets) asset.photo.id,
+    }, deleteCachedFiles: true);
+    return true;
+  }
+
+  bool canDeleteSystemMediaForAssetIds(Set<String> photoIds) {
+    final activeWorkspace = _activeWorkspace;
+    if (activeWorkspace == null || photoIds.isEmpty) {
+      return false;
+    }
+    final targetAssets = activeWorkspace.assets
+        .where((asset) => photoIds.contains(asset.photo.id))
+        .toList(growable: false);
+    if (targetAssets.isEmpty) {
+      return false;
+    }
+    return targetAssets.every((asset) {
+      final sourceUri = asset.photo.sourceUri;
+      return sourceUri != null && sourceUri.trim().isNotEmpty;
+    });
+  }
+
+  Future<void> _ensureGalleryAccessForSystemDelete() async {
+    var access = await _mediaPicker.galleryAccessStatus();
+    if (!access.canReadMedia) {
+      access = await _mediaPicker.requestGalleryAccess();
+    }
+    if (!access.canReadMedia) {
+      throw const NoemaSystemPhotoDeletePermissionDeniedException();
+    }
   }
 
   void markAssetMissing(String photoId) {
@@ -830,7 +904,7 @@ class ReviewWorkspaceController extends ChangeNotifier {
   }
 
   void _scheduleCaptureMetadataRefresh(String? workspaceId) {
-    if (!NoemaMediaPicker.isAndroidSupported ||
+    if (!NoemaMediaPicker.isNativePickerSupported ||
         workspaceId == null ||
         _disposed) {
       return;

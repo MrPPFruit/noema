@@ -13,6 +13,7 @@ import 'package:noema/core/i18n/noema_strings.dart';
 import 'package:noema/core/models/photo_asset.dart';
 import 'package:noema/core/ui/noema_scene.dart';
 import 'package:noema/core/widgets/noema_dialog.dart';
+import 'package:noema/core/widgets/noema_remove_assets_dialog.dart';
 import 'package:noema/core/widgets/noema_sort_icons.dart';
 import 'package:noema/core/widgets/photo_wall_badges.dart';
 import 'package:noema/core/widgets/recoverable_review_image.dart';
@@ -54,8 +55,6 @@ enum _ObserveSortMode { time, score }
 enum _ObserveScoreSort { highToLow, lowToHigh }
 
 enum _ObserveFilterMode { all, cherished }
-
-enum _ObserveRemoveChoice { indexOnly, deleteLocalData }
 
 enum ExperienceDockVariant {
   focus,
@@ -281,6 +280,9 @@ class _ProcessingScreenState extends State<ProcessingScreen> {
           _appearanceController.resolveTone(context),
         );
         final workspace = widget.workspaceController.workspace;
+        final sceneLayout = NoemaSceneMetrics.layoutOf(context);
+        final topBarTop = sceneLayout.topBarTop;
+        final topShift = sceneLayout.topSafeShift;
         final sourceAssets = workspace.assets;
         final hasAppraisalScores = sourceAssets.any(
           (asset) => asset.photo.appraisalScore != null,
@@ -305,23 +307,23 @@ class _ProcessingScreenState extends State<ProcessingScreen> {
               clipBehavior: Clip.none,
               children: [
                 Positioned(
-                  left: NoemaSceneMetrics.markLeft,
+                  left: sceneLayout.markLeft,
                   top: NoemaSceneMetrics.markTop,
                   child: NoemaThemeMark(palette: palette, mark: '观'),
                 ),
                 Positioned(
-                  left: NoemaSceneMetrics.topBarInset,
-                  right: NoemaSceneMetrics.topBarInset,
-                  top: NoemaSceneMetrics.topBarTop,
+                  left: sceneLayout.topBarInset,
+                  right: sceneLayout.topBarInset,
+                  top: topBarTop,
                   child: _ObserveTopBar(
                     palette: palette,
                     onBack: () => context.go(NoemaRoutes.home),
                   ),
                 ),
                 Positioned(
-                  left: NoemaSceneMetrics.sideInset,
-                  right: NoemaSceneMetrics.sideInset,
-                  top: 84,
+                  left: sceneLayout.sideInset,
+                  right: sceneLayout.sideInset,
+                  top: 84 + topShift,
                   bottom: 0,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -402,8 +404,8 @@ class _ProcessingScreenState extends State<ProcessingScreen> {
                     ),
                   ),
                 Positioned(
-                  right: NoemaSceneMetrics.sideInset,
-                  top: 176,
+                  right: sceneLayout.sideInset,
+                  top: 176 + topShift,
                   child: _ObserveOptionsSheet(
                     palette: palette,
                     open: _observeOptionsOpen,
@@ -700,31 +702,29 @@ class _ProcessingScreenState extends State<ProcessingScreen> {
     final palette = NoemaPalette.fromTone(
       _appearanceController.resolveTone(context),
     );
-    final choice = await showDialog<_ObserveRemoveChoice>(
+    final ids = Set<String>.from(_selectedPhotoIds);
+    final choice = await showNoemaRemoveAssetsDialog(
       context: context,
-      barrierColor: Colors.black.withValues(alpha: 0.46),
-      builder: (context) => _ObserveRemoveDialog(
-        palette: palette,
-        onCancel: () => Navigator.of(context).pop(),
-        onRemoveFromSpace: () =>
-            Navigator.of(context).pop(_ObserveRemoveChoice.indexOnly),
-        onRemoveAndDeleteLocalData: () =>
-            Navigator.of(context).pop(_ObserveRemoveChoice.deleteLocalData),
-      ),
+      palette: palette,
+      canDeleteSystemPhoto: widget.workspaceController
+          .canDeleteSystemMediaForAssetIds(ids),
     );
 
     if (choice == null || !mounted) {
       return;
     }
 
-    final ids = Set<String>.from(_selectedPhotoIds);
-    widget.workspaceController.removeAssetsByIds(
-      ids,
-      deleteCachedFiles: choice == _ObserveRemoveChoice.deleteLocalData,
+    final removed = await removeNoemaAssetsWithChoice(
+      context: context,
+      workspaceController: widget.workspaceController,
+      photoIds: ids,
+      choice: choice,
     );
-    setState(() {
-      _selectedPhotoIds.clear();
-    });
+    if (removed && mounted) {
+      setState(() {
+        _selectedPhotoIds.clear();
+      });
+    }
   }
 
   void _scheduleMissingAssetNotice() {
@@ -2506,64 +2506,6 @@ class _ObserveEmptyState extends StatelessWidget {
             tooltip: strings.importAddPhotos,
             onPressed: onAddPhotos,
             child: const Icon(Icons.add_photo_alternate_outlined, size: 30),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _ObserveRemoveDialog extends StatelessWidget {
-  const _ObserveRemoveDialog({
-    required this.palette,
-    required this.onCancel,
-    required this.onRemoveFromSpace,
-    required this.onRemoveAndDeleteLocalData,
-  });
-
-  final NoemaPalette palette;
-  final VoidCallback onCancel;
-  final VoidCallback onRemoveFromSpace;
-  final VoidCallback onRemoveAndDeleteLocalData;
-
-  @override
-  Widget build(BuildContext context) {
-    final strings = NoemaStrings.of(context);
-
-    return NoemaDialogPanel(
-      panelKey: const ValueKey('observe-remove-dialog-panel'),
-      palette: palette,
-      title: strings.removeFromJingTitle,
-      onClose: onCancel,
-      closeTooltip: strings.close,
-      body: NoemaDialogText(
-        palette: palette,
-        text: strings.removeFromJingChoiceBody,
-        color: palette.muted,
-      ),
-      actions: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          SizedBox(
-            width: double.infinity,
-            child: NoemaDialogButton(
-              palette: palette,
-              label: strings.removeFromSpaceOnly,
-              icon: Icons.link_off_rounded,
-              onPressed: onRemoveFromSpace,
-            ),
-          ),
-          const SizedBox(height: 8),
-          SizedBox(
-            width: double.infinity,
-            child: NoemaDialogButton(
-              palette: palette,
-              label: strings.removeAndDeleteLocalData,
-              icon: Icons.delete_outline_rounded,
-              tone: NoemaDialogButtonTone.danger,
-              onPressed: onRemoveAndDeleteLocalData,
-            ),
           ),
         ],
       ),

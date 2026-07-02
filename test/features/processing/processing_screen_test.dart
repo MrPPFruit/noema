@@ -944,9 +944,9 @@ void main() {
     await _pumpObserveUi(tester);
 
     expect(find.text('从此境移除'), findsOneWidget);
-    expect(find.textContaining('系统相册原图不会被删除'), findsOneWidget);
+    expect(find.textContaining('可以只从此境移除'), findsOneWidget);
     expect(find.text('只从此境移除'), findsOneWidget);
-    expect(find.text('移除并删除 Noema 本地数据'), findsOneWidget);
+    expect(find.text('删除手机相册原图'), findsOneWidget);
 
     await tester.tap(find.text('只从此境移除'));
     await _pumpObserveUi(tester);

@@ -55,6 +55,9 @@ class NoemaSceneMetrics {
 
   static const double designWidth = 390.0;
   static const double designHeight = 844.0;
+  static const double tabletBreakpoint = 600.0;
+  static const double tabletSideInset = 40.0;
+  static const double tabletMarkLeft = 40.0;
   static const double topBarHeight = 44.0;
   static const double markLeft = 27.0;
   static const double topBarTop = 28.0;
@@ -65,6 +68,123 @@ class NoemaSceneMetrics {
   static const double iconVisualSize = 40.0;
   static const double topBarInset =
       sideInset - ((iconTapSize - iconVisualSize) / 2);
+
+  static double topBarTopFor(BuildContext context) {
+    return math.max(topBarTop, MediaQuery.viewPaddingOf(context).top);
+  }
+
+  static double topSafeShiftFor(BuildContext context) {
+    return topBarTopFor(context) - topBarTop;
+  }
+
+  static NoemaSceneLayout resolveLayout(
+    BuildContext context,
+    BoxConstraints constraints,
+  ) {
+    final mediaQuery = MediaQuery.of(context);
+    final viewportSize = mediaQuery.size;
+    final availableWidth = constraints.hasBoundedWidth
+        ? constraints.maxWidth
+        : viewportSize.width;
+    final availableHeight = constraints.hasBoundedHeight
+        ? constraints.maxHeight
+        : viewportSize.height;
+    final isTablet =
+        viewportSize.shortestSide > tabletBreakpoint &&
+        availableWidth > tabletBreakpoint;
+    final frameWidth = isTablet
+        ? availableWidth
+        : math.min(availableWidth, designWidth);
+    final frameHeight = math.max(availableHeight, viewportSize.height);
+    final contentHeight = isTablet
+        ? frameHeight
+        : math.min(frameHeight, designHeight);
+    final resolvedSideInset = isTablet ? tabletSideInset : sideInset;
+    final resolvedTopBarTop = math.max(topBarTop, mediaQuery.viewPadding.top);
+
+    return NoemaSceneLayout(
+      viewportSize: viewportSize,
+      frameWidth: frameWidth,
+      frameHeight: frameHeight,
+      contentHeight: contentHeight,
+      sideInset: resolvedSideInset,
+      topBarInset: resolvedSideInset - ((iconTapSize - iconVisualSize) / 2),
+      topBarTop: resolvedTopBarTop,
+      topSafeShift: resolvedTopBarTop - topBarTop,
+      markLeft: isTablet ? tabletMarkLeft : markLeft,
+      isTablet: isTablet,
+    );
+  }
+
+  static NoemaSceneLayout layoutOf(BuildContext context) {
+    final scoped = _NoemaSceneLayoutScope.maybeOf(context);
+    if (scoped != null) {
+      return scoped;
+    }
+    final mediaQuery = MediaQuery.maybeOf(context);
+    if (mediaQuery == null) {
+      return const NoemaSceneLayout.compact();
+    }
+    return resolveLayout(context, BoxConstraints.tight(mediaQuery.size));
+  }
+}
+
+class NoemaSceneLayout {
+  const NoemaSceneLayout({
+    required this.viewportSize,
+    required this.frameWidth,
+    required this.frameHeight,
+    required this.contentHeight,
+    required this.sideInset,
+    required this.topBarInset,
+    required this.topBarTop,
+    required this.topSafeShift,
+    required this.markLeft,
+    required this.isTablet,
+  });
+
+  const NoemaSceneLayout.compact()
+    : viewportSize = const Size(
+        NoemaSceneMetrics.designWidth,
+        NoemaSceneMetrics.designHeight,
+      ),
+      frameWidth = NoemaSceneMetrics.designWidth,
+      frameHeight = NoemaSceneMetrics.designHeight,
+      contentHeight = NoemaSceneMetrics.designHeight,
+      sideInset = NoemaSceneMetrics.sideInset,
+      topBarInset = NoemaSceneMetrics.topBarInset,
+      topBarTop = NoemaSceneMetrics.topBarTop,
+      topSafeShift = 0,
+      markLeft = NoemaSceneMetrics.markLeft,
+      isTablet = false;
+
+  final Size viewportSize;
+  final double frameWidth;
+  final double frameHeight;
+  final double contentHeight;
+  final double sideInset;
+  final double topBarInset;
+  final double topBarTop;
+  final double topSafeShift;
+  final double markLeft;
+  final bool isTablet;
+}
+
+class _NoemaSceneLayoutScope extends InheritedWidget {
+  const _NoemaSceneLayoutScope({required this.layout, required super.child});
+
+  final NoemaSceneLayout layout;
+
+  static NoemaSceneLayout? maybeOf(BuildContext context) {
+    return context
+        .dependOnInheritedWidgetOfExactType<_NoemaSceneLayoutScope>()
+        ?.layout;
+  }
+
+  @override
+  bool updateShouldNotify(covariant _NoemaSceneLayoutScope oldWidget) {
+    return layout != oldWidget.layout;
+  }
 }
 
 class NoemaSceneFrame extends StatelessWidget {
@@ -83,28 +203,24 @@ class NoemaSceneFrame extends StatelessWidget {
       color: palette.backgroundEnd,
       child: LayoutBuilder(
         builder: (context, constraints) {
-          final width = math.min(
-            constraints.maxWidth,
-            NoemaSceneMetrics.designWidth,
-          );
-          final height = math.max(
-            constraints.maxHeight,
-            MediaQuery.sizeOf(context).height,
-          );
-          final contentHeight = math.min(
-            height,
-            NoemaSceneMetrics.designHeight,
-          );
+          final layout = NoemaSceneMetrics.resolveLayout(context, constraints);
 
           return Center(
             child: SizedBox(
-              width: width,
-              height: height,
-              child: NoemaSceneSurface(
-                palette: palette,
-                child: Align(
-                  alignment: Alignment.topCenter,
-                  child: SizedBox(height: contentHeight, child: child),
+              width: layout.frameWidth,
+              height: layout.frameHeight,
+              child: _NoemaSceneLayoutScope(
+                layout: layout,
+                child: NoemaSceneSurface(
+                  palette: palette,
+                  child: Align(
+                    alignment: Alignment.topCenter,
+                    child: SizedBox(
+                      width: layout.frameWidth,
+                      height: layout.contentHeight,
+                      child: child,
+                    ),
+                  ),
                 ),
               ),
             ),

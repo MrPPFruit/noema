@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image/image.dart' as img;
@@ -439,6 +440,60 @@ void main() {
 
     expect(find.text('总观内容。'), findsOneWidget);
     expect(find.text('你最想保留什么？'), findsOneWidget);
+  });
+
+  testWidgets('observe viewer appraisal sheet removes the open photo', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(600, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final controller = _controller();
+
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('zh'),
+        localizationsDelegates: const [
+          GlobalMaterialLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+        ],
+        supportedLocales: const [Locale('zh'), Locale('en')],
+        home: AppraiseSheetPhotoViewerPage(
+          workspaceController: controller,
+          initialPhotoId: 'photo-1',
+        ),
+      ),
+    );
+    await tester.pump();
+
+    await tester.drag(
+      find.byKey(const ValueKey('appraise-viewer-sheet-handle')),
+      const Offset(0, -620),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const ValueKey('appraise-viewer-sheet-remove')),
+      findsOneWidget,
+    );
+
+    await tester.tap(
+      find.byKey(const ValueKey('appraise-viewer-sheet-remove')),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('从此境移除'), findsOneWidget);
+    expect(find.text('只从此境移除'), findsOneWidget);
+    expect(find.text('删除手机相册原图'), findsOneWidget);
+
+    await tester.tap(find.text('只从此境移除'));
+    await tester.pumpAndSettle();
+
+    expect(controller.workspace.assets, hasLength(2));
+    expect(controller.workspace.assetById('photo-1'), isNull);
   });
 }
 

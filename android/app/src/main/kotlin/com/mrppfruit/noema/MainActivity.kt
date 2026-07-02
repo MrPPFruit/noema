@@ -7,6 +7,7 @@ import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.ContentUris
 import android.content.Intent
+import android.content.IntentSender
 import android.content.pm.PackageManager
 import android.database.Cursor
 import android.graphics.Bitmap
@@ -40,6 +41,8 @@ import org.json.JSONObject
 class MainActivity : FlutterActivity() {
     private var pendingPickResult: MethodChannel.Result? = null
     private var pendingGalleryAccessResult: MethodChannel.Result? = null
+    private var pendingSystemDeleteResult: MethodChannel.Result? = null
+    private var pendingSystemDeleteUriCount: Int = 0
     private var systemBackChannel: MethodChannel? = null
     private var predictiveBackCallback: OnBackInvokedCallback? = null
     private val imageExecutor: ExecutorService = Executors.newFixedThreadPool(IMAGE_WORKER_COUNT)
@@ -65,6 +68,7 @@ class MainActivity : FlutterActivity() {
                 "createThumbnail" -> createCachedImage(call, result, "thumbs", 320)
                 "createPreview" -> createCachedImage(call, result, "previews", 1800)
                 "deleteCachedFiles" -> deleteCachedFiles(call, result)
+                "deleteMediaItems" -> deleteMediaItems(call, result)
                 else -> result.notImplemented()
             }
         }
@@ -174,6 +178,10 @@ class MainActivity : FlutterActivity() {
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        if (requestCode == REQUEST_DELETE_MEDIA_ITEMS) {
+            completeSystemMediaDelete(resultCode)
+            return
+        }
         if (requestCode != REQUEST_PICK_IMAGES) {
             super.onActivityResult(requestCode, resultCode, data)
             return
@@ -802,6 +810,160 @@ class MainActivity : FlutterActivity() {
         }
     }
 
+    private fun deleteMediaItems(call: MethodCall, result: MethodChannel.Result) {
+        val uriValues = call.argument<List<Any?>>("uris").orEmpty().filterIsInstance<String>()
+        if (uriValues.isEmpty()) {
+            result.success(mapOf("deleted" to false, "count" to 0, "cancelled" to false))
+            return
+        }
+        if (pendingSystemDeleteResult != null) {
+            result.error("system_media_delete_busy", "Another media delete request is active.", null)
+            return
+        }
+
+        val deleteUris = mutableListOf<Uri>()
+        val seenUris = mutableSetOf<String>()
+        for (value in uriValues) {
+            val mediaUri = mediaStoreDeleteUri(Uri.parse(value))
+            if (mediaUri == null) {
+                result.error(
+                    "unsupported_media_uri",
+                    "Only specific MediaStore media items can be deleted.",
+                    value,
+                )
+                return
+            }
+            val key = mediaUri.toString()
+            if (seenUris.add(key)) {
+                deleteUris.add(mediaUri)
+            }
+        }
+        if (deleteUris.isEmpty()) {
+            result.success(mapOf("deleted" to false, "count" to 0, "cancelled" to false))
+            return
+        }
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            val request = try {
+                MediaStore.createDeleteRequest(contentResolver, deleteUris)
+            } catch (error: IllegalArgumentException) {
+                result.error("unsupported_media_uri", error.message, null)
+                return
+            } catch (error: SecurityException) {
+                result.error("system_media_delete_failed", error.message, null)
+                return
+            }
+            pendingSystemDeleteResult = result
+            pendingSystemDeleteUriCount = deleteUris.size
+            try {
+                startIntentSenderForResult(
+                    request.intentSender,
+                    REQUEST_DELETE_MEDIA_ITEMS,
+                    null,
+                    0,
+                    0,
+                    0,
+                    null,
+                )
+            } catch (error: IntentSender.SendIntentException) {
+                pendingSystemDeleteResult = null
+                pendingSystemDeleteUriCount = 0
+                result.error("system_media_delete_failed", error.message, null)
+            }
+            return
+        }
+
+        result.error(
+            "system_media_delete_unsupported",
+            "Deleting system media from Noema requires Android 11 or later.",
+            null,
+        )
+    }
+
+    private fun completeSystemMediaDelete(resultCode: Int) {
+        val result = pendingSystemDeleteResult ?: return
+        val count = pendingSystemDeleteUriCount
+        pendingSystemDeleteResult = null
+        pendingSystemDeleteUriCount = 0
+        val deleted = resultCode == Activity.RESULT_OK
+        result.success(
+            mapOf(
+                "deleted" to deleted,
+                "count" to if (deleted) count else 0,
+                "cancelled" to !deleted,
+            ),
+        )
+    }
+
+    private fun mediaStoreDeleteUri(uri: Uri): Uri? {
+        if (isSpecificMediaStoreItem(uri)) {
+            return uri
+        }
+        photoPickerMediaStoreUri(uri)?.let { return it }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            try {
+                val mediaUri = MediaStore.getMediaUri(this, uri)
+                if (mediaUri != null && isSpecificMediaStoreItem(mediaUri)) {
+                    return mediaUri
+                }
+            } catch (_: Exception) {
+                return null
+            }
+        }
+        return null
+    }
+
+    private fun photoPickerMediaStoreUri(uri: Uri): Uri? {
+        if (uri.scheme != "content" || uri.authority != MediaStore.AUTHORITY) {
+            return null
+        }
+        val segments = uri.pathSegments
+        if (segments.size < 2 || segments[segments.size - 2] != "media") {
+            return null
+        }
+        val id = uri.lastPathSegment?.toLongOrNull() ?: return null
+        if (!segments.contains("picker")) {
+            return null
+        }
+        val candidate = ContentUris.withAppendedId(
+            MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+            id,
+        )
+        return if (mediaStoreImageExists(candidate)) candidate else null
+    }
+
+    private fun mediaStoreImageExists(uri: Uri): Boolean {
+        return try {
+            contentResolver.query(
+                uri,
+                arrayOf(MediaStore.Images.Media._ID),
+                null,
+                null,
+                null,
+            )?.use { cursor -> cursor.moveToFirst() } ?: false
+        } catch (_: Exception) {
+            false
+        }
+    }
+
+    private fun isSpecificMediaStoreItem(uri: Uri): Boolean {
+        if (uri.scheme != "content" || uri.authority != MediaStore.AUTHORITY) {
+            return false
+        }
+        val segments = uri.pathSegments
+        if (segments.size < 4 || segments[segments.size - 2] != "media") {
+            return false
+        }
+        if (segments[1] != "images") {
+            return false
+        }
+        return try {
+            ContentUris.parseId(uri) >= 0
+        } catch (_: Exception) {
+            false
+        }
+    }
+
     private fun deleteNoemaCachedFile(path: String): Boolean {
         if (path.isBlank()) {
             return false
@@ -1107,6 +1269,7 @@ class MainActivity : FlutterActivity() {
         private const val SYSTEM_BACK_CHANNEL = "com.mrppfruit.noema/system_back"
         private const val REQUEST_PICK_IMAGES = 7612
         private const val REQUEST_GALLERY_ACCESS = 7613
+        private const val REQUEST_DELETE_MEDIA_ITEMS = 7614
         private const val IMAGE_WORKER_COUNT = 3
         private const val IMAGE_CACHE_VERSION = "v5"
         private const val GALLERY_WARM_THUMBNAIL_COUNT = 96

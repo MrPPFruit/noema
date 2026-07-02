@@ -3,13 +3,13 @@ import 'dart:math' as math;
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:noema/app/noema_routes.dart';
 import 'package:noema/core/i18n/noema_strings.dart';
 import 'package:noema/core/models/analysis_result.dart';
 import 'package:noema/core/models/photo_asset.dart';
 import 'package:noema/core/theme/noema_colors.dart';
+import 'package:noema/core/ui/noema_orientation.dart';
 import 'package:noema/core/ui/noema_scene.dart';
 import 'package:noema/core/workflow/review_workspace.dart';
 import 'package:noema/core/workflow/review_workspace_controller.dart';
@@ -113,7 +113,7 @@ class _AppreciateViewerPageState extends State<AppreciateViewerPage> {
         }
       });
     }
-    unawaited(_setPortrait(markActivity: false));
+    unawaited(_restoreDefaultOrientations(markActivity: false));
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) {
         return;
@@ -134,7 +134,7 @@ class _AppreciateViewerPageState extends State<AppreciateViewerPage> {
     if (_ownsAppearanceController) {
       _appearanceController.dispose();
     }
-    unawaited(_setPortrait(markActivity: false));
+    unawaited(_restoreDefaultOrientations(markActivity: false));
     super.dispose();
   }
 
@@ -304,7 +304,7 @@ class _AppreciateViewerPageState extends State<AppreciateViewerPage> {
   Future<void> _exitViewer() async {
     _stopPlayback();
     _chromeIdleTimer?.cancel();
-    await _setPortrait(markActivity: false);
+    await _restoreDefaultOrientations(markActivity: false);
     if (!mounted) {
       return;
     }
@@ -570,10 +570,7 @@ class _AppreciateViewerPageState extends State<AppreciateViewerPage> {
     if (_landscape) {
       await _setPortrait();
     } else {
-      await SystemChrome.setPreferredOrientations(const [
-        DeviceOrientation.landscapeLeft,
-        DeviceOrientation.landscapeRight,
-      ]);
+      await setNoemaLandscapeOrientations();
       if (mounted) {
         setState(() {
           _landscape = true;
@@ -584,9 +581,19 @@ class _AppreciateViewerPageState extends State<AppreciateViewerPage> {
   }
 
   Future<void> _setPortrait({bool markActivity = true}) async {
-    await SystemChrome.setPreferredOrientations(const [
-      DeviceOrientation.portraitUp,
-    ]);
+    await setNoemaPortraitOrientation();
+    if (mounted) {
+      setState(() {
+        _landscape = false;
+      });
+      if (markActivity) {
+        _markChromeActivity();
+      }
+    }
+  }
+
+  Future<void> _restoreDefaultOrientations({bool markActivity = true}) async {
+    await setNoemaDefaultOrientations();
     if (mounted) {
       setState(() {
         _landscape = false;
@@ -745,6 +752,8 @@ class _AppreciateChrome extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final strings = NoemaStrings.of(context);
+    final sceneLayout = NoemaSceneMetrics.layoutOf(context);
+    final topBarTop = sceneLayout.topBarTop;
 
     return IgnorePointer(
       ignoring: !visible,
@@ -757,9 +766,9 @@ class _AppreciateChrome extends StatelessWidget {
             const _AppreciateGradient(top: true),
             const _AppreciateGradient(top: false),
             Positioned(
-              left: NoemaSceneMetrics.topBarInset,
-              right: NoemaSceneMetrics.topBarInset,
-              top: NoemaSceneMetrics.topBarTop,
+              left: sceneLayout.topBarInset,
+              right: sceneLayout.topBarInset,
+              top: topBarTop,
               child: SizedBox(
                 height: NoemaSceneMetrics.topBarHeight,
                 child: Align(

@@ -1,7 +1,6 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:image/image.dart' as img;
 import 'package:image_picker/image_picker.dart';
 import 'package:noema/features/import/gallery_import_preparer.dart';
 
@@ -13,9 +12,9 @@ void main() {
     final bytes = List<int>.generate(8, (index) => index);
     await image.writeAsBytes(bytes);
 
-    final asset = await const GalleryImportPreparer(
-      maxBytes: 8,
-    ).prepareOne(XFile(image.path, name: 'photo.jpg'));
+    final asset = await const GalleryImportPreparer().prepareOne(
+      XFile(image.path, name: 'photo.jpg'),
+    );
 
     expect(asset.id, image.path);
     expect(asset.name, 'photo.jpg');
@@ -25,19 +24,18 @@ void main() {
     expect(asset.previewUnavailable, isFalse);
   });
 
-  test('prepares picker file with decoded image dimensions', () async {
+  test('does not decode dimensions during lightweight preparation', () async {
     final tempDir = await Directory.systemTemp.createTemp('noema-import-');
     addTearDown(() => tempDir.delete(recursive: true));
     final image = File('${tempDir.path}/landscape.png');
-    final bytes = img.encodePng(img.Image(width: 800, height: 400));
-    await image.writeAsBytes(bytes);
+    await image.writeAsBytes(List<int>.generate(16, (index) => index));
 
     final asset = await const GalleryImportPreparer().prepareOne(
       XFile(image.path, name: 'landscape.png'),
     );
 
-    expect(asset.width, 800);
-    expect(asset.height, 400);
+    expect(asset.width, isNull);
+    expect(asset.height, isNull);
     expect(asset.previewBytes, isNull);
     expect(asset.analysisBytes, isNull);
   });
@@ -50,9 +48,9 @@ void main() {
       final image = File('${tempDir.path}/large.jpg');
       await image.writeAsBytes(List<int>.generate(16, (index) => index));
 
-      final asset = await const GalleryImportPreparer(
-        maxBytes: 8,
-      ).prepareOne(XFile(image.path, name: 'large.jpg'));
+      final asset = await const GalleryImportPreparer().prepareOne(
+        XFile(image.path, name: 'large.jpg'),
+      );
 
       expect(asset.thumbnailPath, image.path);
       expect(asset.previewBytes, isNull);

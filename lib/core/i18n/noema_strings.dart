@@ -30,8 +30,8 @@ class NoemaStrings {
   String get remove => isZh ? '移除' : 'Remove';
   String get removeFromSpaceOnly =>
       isZh ? '只从此境移除' : 'Remove from this space only';
-  String get removeAndDeleteLocalData =>
-      isZh ? '移除并删除 Noema 本地数据' : 'Remove and delete Noema local data';
+  String get removeAndDeleteSystemPhoto =>
+      isZh ? '删除手机相册原图' : 'Delete from photo library';
   String get close => isZh ? '关闭' : 'Close';
   String get importAddPhotos => isZh ? '添加照片' : 'Add photos';
   String get importAppendPhotos => isZh ? '添入此境' : 'Add to this space';
@@ -80,8 +80,17 @@ class NoemaStrings {
   String get removeFromJingBody =>
       isZh ? '原照片仍在系统相册中' : 'Original photos stay in your photo library.';
   String get removeFromJingChoiceBody => isZh
-      ? '系统相册原图不会被删除。你可以只移除此境索引，或同时清理 Noema 本地缓存。'
-      : 'Original photos stay in your photo library. You can remove only this space index, or also clear Noema local cache.';
+      ? '可以只从此境移除；也可以先通过系统确认删除手机相册原图，确认成功后 Noema 会同步移除。'
+      : 'Remove only from this space, or use the system confirmation to delete the original photo and then remove it from Noema.';
+  String get removeSystemPhotoUnavailable => isZh
+      ? '有些照片不是可删除的系统相册项目，暂时只能从 Noema 移除。'
+      : 'Some photos are not deletable system library items. Remove them from Noema only for now.';
+  String get removeSystemPhotoPermissionDenied => isZh
+      ? '需要先允许访问图库，才能删除手机相册原图。'
+      : 'Photo library access is required before deleting the original photo.';
+  String get removeSystemPhotoFailed => isZh
+      ? '系统没有完成删除，照片仍保留在 Noema。'
+      : 'The system did not complete deletion, so the photo stays in Noema.';
 
   String get processingTitle => isZh ? '正在整理' : 'Processing';
   String get readingPhotoDetails => isZh ? '正在读取照片信息' : 'Reading photo details';
@@ -164,17 +173,17 @@ class NoemaStrings {
   String get cullNextUnfinished => isZh ? '下一组未完成' : 'Next unfinished group';
   String get cullAllGroupsComplete => isZh ? '全部已完成' : 'All groups complete';
   String cullClearConfirm(int count) => isZh
-      ? '将从此境移除 $count 张出境照片。系统相册原图不会被删除。'
+      ? '将处理 $count 张出境照片。可只从此境移除，也可通过系统确认删除手机相册原图。'
       : count == 1
-      ? 'Remove 1 outbound photo from this space. The original stays in your photo library.'
-      : 'Remove $count outbound photos from this space. Originals stay in your photo library.';
+      ? 'Handle 1 outbound photo. Remove it only from this space or delete the original through system confirmation.'
+      : 'Handle $count outbound photos. Remove them only from this space or delete originals through system confirmation.';
   String get cullClearCompletedTitle =>
       isZh ? '处理已完成丢弃' : 'Clear completed discards';
   String cullClearCompletedConfirm(int count) => isZh
-      ? '将从此境移除已完成组中标记丢弃的 $count 张照片。系统相册原图不会被删除。'
+      ? '将处理已完成组中标记丢弃的 $count 张照片。可只从此境移除，也可通过系统确认删除手机相册原图。'
       : count == 1
-      ? 'Remove 1 discarded photo from completed groups in this space. The original stays in your photo library.'
-      : 'Remove $count discarded photos from completed groups in this space. Originals stay in your photo library.';
+      ? 'Handle 1 discarded photo from completed groups. Remove it only from this space or delete the original through system confirmation.'
+      : 'Handle $count discarded photos from completed groups. Remove them only from this space or delete originals through system confirmation.';
   String get cullClearCompletedEmpty => isZh
       ? '当前没有已完成组中标记丢弃的照片。'
       : 'No discarded photos in completed groups right now.';

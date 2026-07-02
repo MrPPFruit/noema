@@ -4,6 +4,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:noema/app/back_navigation.dart';
 import 'package:noema/app/router.dart';
 import 'package:noema/core/i18n/noema_strings.dart';
@@ -13,6 +14,7 @@ import 'package:noema/core/widgets/noema_image_cache.dart';
 import 'package:noema/core/widgets/noema_message.dart';
 import 'package:noema/core/workflow/review_workspace_controller.dart';
 import 'package:noema/features/import/gallery_asset_picker.dart';
+import 'package:noema/features/import/gallery_import_cache.dart';
 import 'package:noema/features/import/import_analysis_source.dart';
 import 'package:noema/features/import/import_image_source.dart';
 import 'package:noema/features/import/noema_media_picker.dart';
@@ -382,6 +384,14 @@ class _ImportScreenState extends State<ImportScreen> {
             thumbnailPath = null;
           }
         }
+        if (thumbnailPath != null && sourceUri == null) {
+          final persistedPath = await persistGalleryImportFile(
+            XFile(thumbnailPath, name: asset.name),
+          );
+          if (persistedPath != null && persistedPath.isNotEmpty) {
+            thumbnailPath = persistedPath;
+          }
+        }
         final analysisBytes = await loadImportAnalysisBytes(thumbnailPath);
 
         if (!mounted) {
@@ -561,6 +571,9 @@ class _ImportScreenState extends State<ImportScreen> {
         final palette = NoemaPalette.fromTone(
           _appearanceController.resolveTone(context),
         );
+        final sceneLayout = NoemaSceneMetrics.layoutOf(context);
+        final topBarTop = sceneLayout.topBarTop;
+        final topShift = sceneLayout.topSafeShift;
 
         return Scaffold(
           body: NoemaSceneFrame(
@@ -569,14 +582,14 @@ class _ImportScreenState extends State<ImportScreen> {
               clipBehavior: Clip.none,
               children: [
                 Positioned(
-                  left: NoemaSceneMetrics.markLeft,
+                  left: sceneLayout.markLeft,
                   top: NoemaSceneMetrics.markTop,
                   child: NoemaThemeMark(palette: palette, mark: '入'),
                 ),
                 Positioned(
-                  left: NoemaSceneMetrics.topBarInset,
-                  right: NoemaSceneMetrics.topBarInset,
-                  top: NoemaSceneMetrics.topBarTop,
+                  left: sceneLayout.topBarInset,
+                  right: sceneLayout.topBarInset,
+                  top: topBarTop,
                   child: _ImportTopBar(
                     palette: palette,
                     selecting: _selecting,
@@ -588,9 +601,9 @@ class _ImportScreenState extends State<ImportScreen> {
                   ),
                 ),
                 Positioned(
-                  left: NoemaSceneMetrics.sideInset,
-                  right: NoemaSceneMetrics.sideInset,
-                  top: 94,
+                  left: sceneLayout.sideInset,
+                  right: sceneLayout.sideInset,
+                  top: 94 + topShift,
                   bottom: 0,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1173,35 +1186,39 @@ class _ImportGrid extends StatelessWidget {
     return Stack(
       fit: StackFit.expand,
       children: [
-        GridView.builder(
-          physics: const BouncingScrollPhysics(),
-          clipBehavior: Clip.hardEdge,
-          padding: const EdgeInsets.only(
-            top: _importGridTopPadding,
-            bottom: _importGridBottomPadding,
-          ),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 4,
-            mainAxisSpacing: 8,
-            crossAxisSpacing: 8,
-          ),
-          itemCount: assets.length,
-          itemBuilder: (context, index) {
-            final asset = assets[index];
-            final selected = selectedIds.contains(asset.id);
-            return _ImportThumbnail(
-              palette: palette,
-              asset: asset,
-              selected: selected,
-              selecting: selectedIds.isNotEmpty,
-              onTap: () {
-                if (selectedIds.isEmpty) {
-                  onPreview(asset);
-                } else {
-                  onToggleSelection(asset);
-                }
+        LayoutBuilder(
+          builder: (context, constraints) {
+            return GridView.builder(
+              physics: const BouncingScrollPhysics(),
+              clipBehavior: Clip.hardEdge,
+              padding: const EdgeInsets.only(
+                top: _importGridTopPadding,
+                bottom: _importGridBottomPadding,
+              ),
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: _importGridCrossAxisCount(constraints.maxWidth),
+                mainAxisSpacing: 8,
+                crossAxisSpacing: 8,
+              ),
+              itemCount: assets.length,
+              itemBuilder: (context, index) {
+                final asset = assets[index];
+                final selected = selectedIds.contains(asset.id);
+                return _ImportThumbnail(
+                  palette: palette,
+                  asset: asset,
+                  selected: selected,
+                  selecting: selectedIds.isNotEmpty,
+                  onTap: () {
+                    if (selectedIds.isEmpty) {
+                      onPreview(asset);
+                    } else {
+                      onToggleSelection(asset);
+                    }
+                  },
+                  onLongPress: () => onLongPress(asset),
+                );
               },
-              onLongPress: () => onLongPress(asset),
             );
           },
         ),
@@ -1218,6 +1235,13 @@ class _ImportGrid extends StatelessWidget {
       ],
     );
   }
+}
+
+int _importGridCrossAxisCount(double width) {
+  if (width < NoemaSceneMetrics.tabletBreakpoint) {
+    return 4;
+  }
+  return math.max(4, math.min(8, width ~/ 120));
 }
 
 class _ImportThumbnail extends StatelessWidget {

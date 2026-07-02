@@ -380,6 +380,83 @@ void main() {
     );
   });
 
+  testWidgets('Appraise long press selects and removes photos', (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final controller = _sampleWorkspaceController();
+
+    await tester.pumpWidget(_AppraiseTestApp(controller: controller));
+    await tester.pumpAndSettle();
+
+    expect(controller.workspace.assets, hasLength(24));
+
+    await tester.longPress(
+      find.byKey(const ValueKey('appraise-photo-photo-24')),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byTooltip('AI 品鉴'), findsNothing);
+    expect(find.byTooltip('系列品鉴'), findsNothing);
+    expect(find.byTooltip('取消'), findsOneWidget);
+    expect(find.byTooltip('移除'), findsOneWidget);
+
+    await tester.tap(find.byKey(const ValueKey('appraise-photo-photo-23')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('移除'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('从此境移除'), findsOneWidget);
+    expect(find.textContaining('可以只从此境移除'), findsOneWidget);
+    expect(find.text('只从此境移除'), findsOneWidget);
+    expect(find.text('删除手机相册原图'), findsOneWidget);
+
+    await tester.tap(find.text('只从此境移除'));
+    await tester.pumpAndSettle();
+
+    expect(controller.workspace.assets, hasLength(22));
+    expect(controller.workspace.assetById('photo-24'), isNull);
+    expect(controller.workspace.assetById('photo-23'), isNull);
+    expect(find.byTooltip('AI 品鉴'), findsOneWidget);
+  });
+
+  testWidgets('Appraise viewer sheet removes the open photo', (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final controller = _sampleWorkspaceController();
+
+    await tester.pumpWidget(_AppraiseTestApp(controller: controller));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('appraise-photo-photo-24')));
+    await tester.pump();
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const ValueKey('appraise-viewer-sheet-remove')),
+      findsOneWidget,
+    );
+
+    await tester.tap(
+      find.byKey(const ValueKey('appraise-viewer-sheet-remove')),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('从此境移除'), findsOneWidget);
+    expect(find.text('只从此境移除'), findsOneWidget);
+    expect(find.text('删除手机相册原图'), findsOneWidget);
+
+    await tester.tap(find.text('只从此境移除'));
+    await tester.pumpAndSettle();
+
+    expect(controller.workspace.assets, hasLength(23));
+    expect(controller.workspace.assetById('photo-24'), isNull);
+    expect(find.byKey(const ValueKey('appraise-viewer-overlay')), findsNothing);
+  });
+
   testWidgets('Appraise viewer sheet snaps to appraisal, peek, and hidden', (
     tester,
   ) async {

@@ -96,4 +96,25 @@ void main() {
       }
     }
   });
+
+  test('tablet width increases columns without stretching photo tiles', () {
+    final phone = buildObservePhotoWallLayout(
+      width: 342,
+      density: ObserveWallDensity.balanced,
+      items: const [
+        ObservePhotoWallItem(id: '1', aspectRatio: 1.33),
+        ObservePhotoWallItem(id: '2', aspectRatio: 1.33),
+      ],
+    );
+    final tablet = buildObservePhotoWallLayout(
+      width: 720,
+      density: ObserveWallDensity.balanced,
+      items: const [
+        ObservePhotoWallItem(id: '1', aspectRatio: 1.33),
+        ObservePhotoWallItem(id: '2', aspectRatio: 1.33),
+      ],
+    );
+
+    expect(tablet.rects.first.width, lessThan(phone.rects.first.width * 1.5));
+  });
 }

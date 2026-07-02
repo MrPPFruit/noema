@@ -1478,6 +1478,238 @@ void main() {
     expect(deletedPaths, isEmpty);
   });
 
+  test(
+    'controller removes assets after system media delete succeeds',
+    () async {
+      final binding = TestWidgetsFlutterBinding.ensureInitialized();
+      const channel = MethodChannel(noemaMediaPickerChannelName);
+      final calls = <MethodCall>[];
+      binding.defaultBinaryMessenger.setMockMethodCallHandler(channel, (call) {
+        calls.add(call);
+        if (call.method == 'galleryAccessStatus') {
+          return Future<Object?>.value('full');
+        }
+        if (call.method == 'deleteMediaItems') {
+          return Future<Object?>.value({
+            'deleted': true,
+            'count': 1,
+            'cancelled': false,
+          });
+        }
+        if (call.method == 'deleteCachedFiles') {
+          return Future<Object?>.value(1);
+        }
+        return Future<Object?>.value(null);
+      });
+      addTearDown(
+        () => binding.defaultBinaryMessenger.setMockMethodCallHandler(
+          channel,
+          null,
+        ),
+      );
+
+      final controller = ReviewWorkspaceController(
+        mediaPicker: const NoemaMediaPicker(channel: channel),
+      );
+      controller.loadSelectedAssets(const [
+        SelectedGalleryAsset(
+          id: 'asset-1',
+          name: 'A.jpg',
+          sourceUri: 'content://media/external/images/media/1',
+          thumbnailPath: '/cache/a-thumb.jpg',
+        ),
+        SelectedGalleryAsset(id: 'asset-2', name: 'B.jpg'),
+      ], name: '友人');
+
+      final removed = await controller.removeAssetsByIdsAfterSystemDelete({
+        'photo-1',
+      });
+      await Future<void>.delayed(Duration.zero);
+
+      expect(removed, isTrue);
+      expect(controller.workspace.assetById('photo-1'), isNull);
+      expect(
+        calls
+            .where((call) => call.method == 'deleteMediaItems')
+            .single
+            .arguments['uris'],
+        ['content://media/external/images/media/1'],
+      );
+      expect(
+        calls
+            .where((call) => call.method == 'deleteCachedFiles')
+            .single
+            .arguments['paths'],
+        ['/cache/a-thumb.jpg'],
+      );
+    },
+  );
+
+  test(
+    'controller requests gallery access before system media delete',
+    () async {
+      final binding = TestWidgetsFlutterBinding.ensureInitialized();
+      const channel = MethodChannel(noemaMediaPickerChannelName);
+      final calls = <MethodCall>[];
+      binding.defaultBinaryMessenger.setMockMethodCallHandler(channel, (call) {
+        calls.add(call);
+        if (call.method == 'galleryAccessStatus') {
+          return Future<Object?>.value('denied');
+        }
+        if (call.method == 'requestGalleryAccess') {
+          return Future<Object?>.value('full');
+        }
+        if (call.method == 'deleteMediaItems') {
+          return Future<Object?>.value({
+            'deleted': true,
+            'count': 1,
+            'cancelled': false,
+          });
+        }
+        if (call.method == 'deleteCachedFiles') {
+          return Future<Object?>.value(1);
+        }
+        return Future<Object?>.value(null);
+      });
+      addTearDown(
+        () => binding.defaultBinaryMessenger.setMockMethodCallHandler(
+          channel,
+          null,
+        ),
+      );
+
+      final controller = ReviewWorkspaceController(
+        mediaPicker: const NoemaMediaPicker(channel: channel),
+      );
+      controller.loadSelectedAssets(const [
+        SelectedGalleryAsset(
+          id: 'asset-1',
+          name: 'A.jpg',
+          sourceUri: 'content://media/external/images/media/1',
+        ),
+      ], name: '友人');
+
+      final removed = await controller.removeAssetsByIdsAfterSystemDelete({
+        'photo-1',
+      });
+
+      expect(removed, isTrue);
+      expect(
+        calls.map((call) => call.method),
+        containsAllInOrder([
+          'galleryAccessStatus',
+          'requestGalleryAccess',
+          'deleteMediaItems',
+        ]),
+      );
+      expect(controller.workspace.assetById('photo-1'), isNull);
+    },
+  );
+
+  test(
+    'controller keeps assets when system media delete is cancelled',
+    () async {
+      final binding = TestWidgetsFlutterBinding.ensureInitialized();
+      const channel = MethodChannel(noemaMediaPickerChannelName);
+      final calls = <MethodCall>[];
+      binding.defaultBinaryMessenger.setMockMethodCallHandler(channel, (call) {
+        calls.add(call);
+        if (call.method == 'galleryAccessStatus') {
+          return Future<Object?>.value('full');
+        }
+        if (call.method == 'deleteMediaItems') {
+          return Future<Object?>.value({
+            'deleted': false,
+            'count': 0,
+            'cancelled': true,
+          });
+        }
+        return Future<Object?>.value(null);
+      });
+      addTearDown(
+        () => binding.defaultBinaryMessenger.setMockMethodCallHandler(
+          channel,
+          null,
+        ),
+      );
+
+      final controller = ReviewWorkspaceController(
+        mediaPicker: const NoemaMediaPicker(channel: channel),
+      );
+      controller.loadSelectedAssets(const [
+        SelectedGalleryAsset(
+          id: 'asset-1',
+          name: 'A.jpg',
+          sourceUri: 'content://media/external/images/media/1',
+          thumbnailPath: '/cache/a-thumb.jpg',
+        ),
+      ], name: '友人');
+
+      final removed = await controller.removeAssetsByIdsAfterSystemDelete({
+        'photo-1',
+      });
+
+      expect(removed, isFalse);
+      expect(controller.workspace.assetById('photo-1'), isNotNull);
+      expect(
+        calls.where((call) => call.method == 'deleteCachedFiles'),
+        isEmpty,
+      );
+    },
+  );
+
+  test('controller rejects system media delete without source uris', () async {
+    final binding = TestWidgetsFlutterBinding.ensureInitialized();
+    const channel = MethodChannel(noemaMediaPickerChannelName);
+    final calls = <MethodCall>[];
+    binding.defaultBinaryMessenger.setMockMethodCallHandler(channel, (call) {
+      calls.add(call);
+      return Future<Object?>.value(null);
+    });
+    addTearDown(
+      () => binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        channel,
+        null,
+      ),
+    );
+
+    final controller = ReviewWorkspaceController(
+      mediaPicker: const NoemaMediaPicker(channel: channel),
+    );
+    controller.loadSelectedAssets(const [
+      SelectedGalleryAsset(id: 'asset-1', name: 'A.jpg'),
+    ], name: '友人');
+
+    expect(
+      controller.removeAssetsByIdsAfterSystemDelete({'photo-1'}),
+      throwsA(isA<NoemaSystemPhotoDeleteUnavailableException>()),
+    );
+    expect(controller.workspace.assetById('photo-1'), isNotNull);
+    expect(calls, isEmpty);
+  });
+
+  test(
+    'controller reports whether selected assets can delete system media',
+    () {
+      final controller = ReviewWorkspaceController();
+      controller.loadSelectedAssets(const [
+        SelectedGalleryAsset(
+          id: 'asset-1',
+          name: 'A.jpg',
+          sourceUri: 'content://media/external/images/media/1',
+        ),
+        SelectedGalleryAsset(id: 'asset-2', name: 'B.jpg'),
+      ], name: '友人');
+
+      expect(controller.canDeleteSystemMediaForAssetIds({'photo-1'}), isTrue);
+      expect(controller.canDeleteSystemMediaForAssetIds({'photo-2'}), isFalse);
+      expect(
+        controller.canDeleteSystemMediaForAssetIds({'photo-1', 'photo-2'}),
+        isFalse,
+      );
+    },
+  );
+
   test('controller skips import-time unavailable assets', () {
     final controller = ReviewWorkspaceController();
 

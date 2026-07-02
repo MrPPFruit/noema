@@ -11,11 +11,20 @@ class NoemaLocalStorePlatform {
     if (!await file.exists()) {
       return null;
     }
-    return file.readAsString();
+    final source = await file.readAsString();
+    final migrated = _migrateNoemaStoragePaths(source, file.parent.path);
+    if (migrated != source) {
+      await _writeSource(file, migrated);
+    }
+    return migrated;
   }
 
   Future<void> write(String source) async {
     final file = await _storeFile();
+    await _writeSource(file, source);
+  }
+
+  Future<void> _writeSource(File file, String source) async {
     await file.parent.create(recursive: true);
     final temporaryFile = File('${file.path}.tmp');
     await temporaryFile.writeAsString(source, flush: true);
@@ -64,4 +73,21 @@ class NoemaLocalStorePlatform {
       '${Directory.systemTemp.path}${Platform.pathSeparator}noema',
     );
   }
+}
+
+String _migrateNoemaStoragePaths(String source, String currentNoemaPath) {
+  var migrated = source;
+  final normalizedCurrentPath = currentNoemaPath.replaceAll(r'\', '/');
+  final patterns = [
+    RegExp(
+      r'/var/mobile/Containers/Data/Application/[^"/]+/Library/Application Support/Noema',
+    ),
+    RegExp(
+      r'/Users/[^"]+?/Library/Developer/CoreSimulator/Devices/[^"]+?/data/Containers/Data/Application/[^"/]+/Library/Application Support/Noema',
+    ),
+  ];
+  for (final pattern in patterns) {
+    migrated = migrated.replaceAll(pattern, normalizedCurrentPath);
+  }
+  return migrated;
 }

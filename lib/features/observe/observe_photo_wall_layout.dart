@@ -41,7 +41,7 @@ ObservePhotoWallLayout buildObservePhotoWallLayout({
     return const ObservePhotoWallLayout(rects: [], height: 0);
   }
 
-  final metrics = _ObserveWallMetrics.forDensity(density);
+  final metrics = _ObserveWallMetrics.forDensity(density, width: width);
   final gaps = math.max(0, metrics.columns - 1) * metrics.spacing;
   final columnWidth = (width - gaps) / metrics.columns;
   if (columnWidth <= 0) {
@@ -91,8 +91,11 @@ class _ObserveWallMetrics {
   final int columns;
   final double spacing;
 
-  factory _ObserveWallMetrics.forDensity(ObserveWallDensity density) {
-    return switch (density) {
+  factory _ObserveWallMetrics.forDensity(
+    ObserveWallDensity density, {
+    required double width,
+  }) {
+    final base = switch (density) {
       ObserveWallDensity.compact => const _ObserveWallMetrics(
         columns: 4,
         spacing: 6,
@@ -106,5 +109,15 @@ class _ObserveWallMetrics {
         spacing: 8,
       ),
     };
+    if (width < 600) {
+      return base;
+    }
+    final targetWidth = switch (density) {
+      ObserveWallDensity.compact => 112.0,
+      ObserveWallDensity.balanced => 132.0,
+      ObserveWallDensity.spacious => 168.0,
+    };
+    final columns = math.max(base.columns, math.min(8, width ~/ targetWidth));
+    return _ObserveWallMetrics(columns: columns, spacing: base.spacing);
   }
 }

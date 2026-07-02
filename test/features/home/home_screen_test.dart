@@ -55,6 +55,26 @@ void main() {
     expect(scrollTop, greaterThan(optionsRect.bottom));
   });
 
+  testWidgets('HomeScreen keeps wordmark below the iPhone sensor area', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    tester.view.viewPadding = const FakeViewPadding(top: 59);
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetViewPadding);
+
+    await _pumpHome(tester);
+
+    final wordmarkTop = tester.getTopLeft(find.text('Noema')).dy;
+    final wordmarkBottom = tester.getBottomLeft(find.text('Noema')).dy;
+    final optionsRect = tester.getRect(find.byTooltip('显示选项'));
+
+    expect(wordmarkTop, greaterThanOrEqualTo(59));
+    expect(optionsRect.top, greaterThan(wordmarkBottom));
+  });
+
   testWidgets('HomeScreen options separate sort and one-button layout groups', (
     tester,
   ) async {
@@ -112,6 +132,36 @@ void main() {
     expect(coverIds, containsAll(['photo-2', 'photo-5', 'photo-4']));
     expect(coverIds, isNot(contains('photo-1')));
     expect(coverIds, isNot(contains('photo-3')));
+  });
+
+  testWidgets('HomeScreen keeps album covers compact on landscape iPad', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1024, 768);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final controller = ReviewWorkspaceController();
+    for (var albumIndex = 0; albumIndex < 8; albumIndex++) {
+      controller.loadSelectedAssets(
+        List.generate(
+          3,
+          (photoIndex) => SelectedGalleryAsset(
+            id: 'album-$albumIndex-photo-$photoIndex',
+            name: 'Photo $photoIndex',
+          ),
+        ),
+        name: '境 $albumIndex',
+      );
+    }
+
+    await _pumpHome(tester, workspaceController: controller);
+
+    final coverSize = tester.getSize(
+      find.byType(NoemaRecoverableReviewImage).first,
+    );
+    expect(coverSize.width, lessThanOrEqualTo(168));
   });
 }
 

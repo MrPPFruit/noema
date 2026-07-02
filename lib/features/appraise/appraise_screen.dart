@@ -16,6 +16,7 @@ import 'package:noema/core/models/series_appraisal.dart';
 import 'package:noema/core/ui/noema_scene.dart';
 import 'package:noema/core/widgets/noema_dialog.dart';
 import 'package:noema/core/widgets/noema_image_cache.dart';
+import 'package:noema/core/widgets/noema_remove_assets_dialog.dart';
 import 'package:noema/core/widgets/noema_sort_icons.dart';
 import 'package:noema/core/widgets/photo_wall_badges.dart';
 import 'package:noema/core/widgets/recoverable_review_image.dart';
@@ -61,6 +62,10 @@ const _qwenApiKeyHelpUrl =
 const _qwenOpenAiHelpUrl =
     'https://help.aliyun.com/zh/model-studio/compatibility-of-openai-with-dashscope';
 
+bool isAppraiseExternalLinkOpenFailure(Object error) {
+  return error is PlatformException || error is MissingPluginException;
+}
+
 enum _AppraiseBand { flaw, formed, fine, cherished }
 
 enum _AppraiseSort { highToLow, lowToHigh }
@@ -90,6 +95,7 @@ class AppraiseScreen extends StatefulWidget {
 class _AppraiseScreenState extends State<AppraiseScreen> {
   final ScrollController _wallScrollController = ScrollController();
   final Set<String> _cherishedPhotoIds = {};
+  final Set<String> _selectedPhotoIds = {};
   final Map<String, AppraiseAiPhotoResult> _aiResults = {};
   final Set<String> _aiInFlightPhotoIds = {};
   final Set<String> _metadataHydrationPhotoIds = {};
@@ -121,6 +127,8 @@ class _AppraiseScreenState extends State<AppraiseScreen> {
   List<_AppraiseRecord> _openSeriesRecords = const [];
   List<_AppraiseRecord> _openSeriesDisplayRecords = const [];
   String? _openedInitialPhotoId;
+
+  bool get _selectingPhotos => _selectedPhotoIds.isNotEmpty;
 
   @override
   void initState() {
@@ -161,6 +169,7 @@ class _AppraiseScreenState extends State<AppraiseScreen> {
         asset.photo.id,
     };
     _metadataHydrationPhotoIds.removeWhere((id) => !activeIds.contains(id));
+    _selectedPhotoIds.removeWhere((id) => !activeIds.contains(id));
     _cherishedPhotoIds
       ..removeWhere((id) => !activeIds.contains(id))
       ..addAll(
@@ -192,7 +201,7 @@ class _AppraiseScreenState extends State<AppraiseScreen> {
   }
 
   void _scheduleMissingExifHydration() {
-    if (!NoemaMediaPicker.isAndroidSupported) {
+    if (!NoemaMediaPicker.isNativePickerSupported) {
       return;
     }
     const mediaPicker = NoemaMediaPicker();
@@ -235,6 +244,9 @@ class _AppraiseScreenState extends State<AppraiseScreen> {
         final palette = NoemaPalette.fromTone(
           _appearanceController.resolveTone(context),
         );
+        final sceneLayout = NoemaSceneMetrics.layoutOf(context);
+        final topBarTop = sceneLayout.topBarTop;
+        final topShift = sceneLayout.topSafeShift;
         final workspace = widget.workspaceController.workspace;
         final records = _recordsFor(workspace);
         final visibleBands = _visibleBands(records);
@@ -268,14 +280,14 @@ class _AppraiseScreenState extends State<AppraiseScreen> {
               clipBehavior: Clip.none,
               children: [
                 Positioned(
-                  left: NoemaSceneMetrics.markLeft,
+                  left: sceneLayout.markLeft,
                   top: NoemaSceneMetrics.markTop,
                   child: NoemaThemeMark(palette: palette, mark: '鉴'),
                 ),
                 Positioned(
-                  left: NoemaSceneMetrics.topBarInset,
-                  right: NoemaSceneMetrics.topBarInset,
-                  top: NoemaSceneMetrics.topBarTop,
+                  left: sceneLayout.topBarInset,
+                  right: sceneLayout.topBarInset,
+                  top: topBarTop,
                   child: _AppraiseTopBar(
                     palette: palette,
                     onBack: () => context.go(NoemaRoutes.observe),
@@ -283,7 +295,7 @@ class _AppraiseScreenState extends State<AppraiseScreen> {
                 ),
                 Positioned(
                   right: 28,
-                  top: _appraiseActionRowTop,
+                  top: _appraiseActionRowTop + topShift,
                   child: NoemaGlassIconButton(
                     palette: palette,
                     tooltip: strings.isZh ? 'AI 设置' : 'AI settings',
@@ -293,9 +305,9 @@ class _AppraiseScreenState extends State<AppraiseScreen> {
                   ),
                 ),
                 Positioned(
-                  left: NoemaSceneMetrics.sideInset,
-                  right: NoemaSceneMetrics.sideInset,
-                  top: _appraiseContentTop,
+                  left: sceneLayout.sideInset,
+                  right: sceneLayout.sideInset,
+                  top: _appraiseContentTop + topShift,
                   bottom: 0,
                   child: records.isEmpty
                       ? _AppraiseEmptyState(palette: palette)
@@ -317,6 +329,7 @@ class _AppraiseScreenState extends State<AppraiseScreen> {
                             _AppraiseToolRow(
                               palette: palette,
                               sort: _sort,
+                              selectingPhotos: _selectingPhotos,
                               aiRunning: _aiBatchRunning,
                               aiCompleted: _aiBatchCompleted,
                               aiTotal: _aiBatchTotal,
@@ -332,6 +345,8 @@ class _AppraiseScreenState extends State<AppraiseScreen> {
                                   seriesAppraisal != null && !seriesIsStale,
                               seriesIsStale: seriesIsStale,
                               onToggleSort: _toggleSort,
+                              onClearSelection: _clearPhotoSelection,
+                              onRemoveSelected: _confirmRemoveSelectedPhotos,
                               onRequestAi: () =>
                                   _requestAiForCurrentLane(laneRecords),
                               onStopAi: _stopAiBatch,
@@ -348,9 +363,12 @@ class _AppraiseScreenState extends State<AppraiseScreen> {
                                 palette: palette,
                                 records: laneRecords,
                                 aiResults: _aiResults,
+                                selectedIds: _selectedPhotoIds,
                                 scrollController: _wallScrollController,
                                 onOpen: (record) =>
                                     _openPreview(laneRecords, record),
+                                onStartSelection: _startPhotoSelection,
+                                onToggleSelection: _togglePhotoSelection,
                                 onToggleCherished: _toggleCherished,
                                 onThumbnailLoaded: widget
                                     .workspaceController
@@ -532,6 +550,60 @@ class _AppraiseScreenState extends State<AppraiseScreen> {
       }
     });
     widget.workspaceController.setAssetCherished(photoId, next);
+  }
+
+  void _startPhotoSelection(_AppraiseRecord record) {
+    setState(() {
+      _selectedPhotoIds.add(record.asset.photo.id);
+    });
+  }
+
+  void _togglePhotoSelection(_AppraiseRecord record) {
+    setState(() {
+      final photoId = record.asset.photo.id;
+      if (_selectedPhotoIds.contains(photoId)) {
+        _selectedPhotoIds.remove(photoId);
+      } else {
+        _selectedPhotoIds.add(photoId);
+      }
+    });
+  }
+
+  void _clearPhotoSelection() {
+    setState(() {
+      _selectedPhotoIds.clear();
+    });
+  }
+
+  Future<void> _confirmRemoveSelectedPhotos() async {
+    if (_selectedPhotoIds.isEmpty) {
+      return;
+    }
+    final palette = NoemaPalette.fromTone(
+      _appearanceController.resolveTone(context),
+    );
+    final ids = Set<String>.from(_selectedPhotoIds);
+    final choice = await showNoemaRemoveAssetsDialog(
+      context: context,
+      palette: palette,
+      canDeleteSystemPhoto: widget.workspaceController
+          .canDeleteSystemMediaForAssetIds(ids),
+    );
+    if (choice == null || !mounted) {
+      return;
+    }
+
+    final removed = await removeNoemaAssetsWithChoice(
+      context: context,
+      workspaceController: widget.workspaceController,
+      photoIds: ids,
+      choice: choice,
+    );
+    if (removed && mounted) {
+      setState(() {
+        _selectedPhotoIds.clear();
+      });
+    }
   }
 
   void _showAiHint() {
@@ -1003,6 +1075,12 @@ class _AppraiseScreenState extends State<AppraiseScreen> {
                     onAiSettingsChanged: _handleAiSettingsChanged,
                     onCheckAiSettings: _checkAiSettingsFor,
                     onRunAi: () => _runAiAppraisal(record),
+                    onRemovePhoto: (photoId) => _confirmRemoveAppraisePhoto(
+                      context: context,
+                      palette: palette,
+                      workspaceController: widget.workspaceController,
+                      photoId: photoId,
+                    ),
                     onSheetFractionChanged: (fraction) {
                       sheetInset.value = fraction;
                     },
@@ -1244,6 +1322,12 @@ class _ObserveAppraiseViewerOverlayState
       onAiSettingsChanged: _handleAiSettingsChanged,
       onCheckAiSettings: _checkAiSettings,
       onRunAi: () => _runAiAppraisal(asset),
+      onRemovePhoto: (photoId) => _confirmRemoveAppraisePhoto(
+        context: context,
+        palette: widget.palette,
+        workspaceController: widget.workspaceController,
+        photoId: photoId,
+      ),
       onSheetFractionChanged: widget.onSheetFractionChanged,
     );
   }
@@ -1570,6 +1654,7 @@ class _AppraiseToolRow extends StatelessWidget {
   const _AppraiseToolRow({
     required this.palette,
     required this.sort,
+    required this.selectingPhotos,
     required this.aiRunning,
     required this.aiCompleted,
     required this.aiTotal,
@@ -1584,6 +1669,8 @@ class _AppraiseToolRow extends StatelessWidget {
     required this.seriesHasResult,
     required this.seriesIsStale,
     required this.onToggleSort,
+    required this.onClearSelection,
+    required this.onRemoveSelected,
     required this.onRequestAi,
     required this.onStopAi,
     required this.onRequestSeries,
@@ -1591,6 +1678,7 @@ class _AppraiseToolRow extends StatelessWidget {
 
   final NoemaPalette palette;
   final _AppraiseSort sort;
+  final bool selectingPhotos;
   final bool aiRunning;
   final int aiCompleted;
   final int aiTotal;
@@ -1605,6 +1693,8 @@ class _AppraiseToolRow extends StatelessWidget {
   final bool seriesHasResult;
   final bool seriesIsStale;
   final VoidCallback onToggleSort;
+  final VoidCallback onClearSelection;
+  final VoidCallback onRemoveSelected;
   final VoidCallback onRequestAi;
   final VoidCallback onStopAi;
   final VoidCallback onRequestSeries;
@@ -1612,6 +1702,30 @@ class _AppraiseToolRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final strings = NoemaStrings.of(context);
+    if (selectingPhotos) {
+      return SizedBox(
+        height: 36,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            NoemaGlassIconButton(
+              palette: palette,
+              tooltip: strings.cancel,
+              icon: Icons.close_rounded,
+              onPressed: onClearSelection,
+            ),
+            NoemaGlassIconButton(
+              palette: palette,
+              tooltip: strings.remove,
+              icon: Icons.delete_outline_rounded,
+              danger: true,
+              onPressed: onRemoveSelected,
+            ),
+          ],
+        ),
+      );
+    }
+
     final aiCurrentLaneTotal = aiReviewed + aiPending;
     final progressLabel = '$aiReviewed/$aiCurrentLaneTotal';
     return SizedBox(
@@ -2045,8 +2159,11 @@ class _AppraisePhotoWall extends StatefulWidget {
     required this.palette,
     required this.records,
     required this.aiResults,
+    required this.selectedIds,
     required this.scrollController,
     required this.onOpen,
+    required this.onStartSelection,
+    required this.onToggleSelection,
     required this.onToggleCherished,
     required this.onThumbnailLoaded,
   });
@@ -2054,8 +2171,11 @@ class _AppraisePhotoWall extends StatefulWidget {
   final NoemaPalette palette;
   final List<_AppraiseRecord> records;
   final Map<String, AppraiseAiPhotoResult> aiResults;
+  final Set<String> selectedIds;
   final ScrollController scrollController;
   final ValueChanged<_AppraiseRecord> onOpen;
+  final ValueChanged<_AppraiseRecord> onStartSelection;
+  final ValueChanged<_AppraiseRecord> onToggleSelection;
   final ValueChanged<String> onToggleCherished;
   final void Function(String photoId, String thumbnailPath) onThumbnailLoaded;
 
@@ -2191,8 +2311,22 @@ class _AppraisePhotoWallState extends State<_AppraisePhotoWall> {
                                           .id],
                                   displayWidth: rect.width,
                                   displayHeight: rect.height,
-                                  onOpen: () =>
-                                      widget.onOpen(widget.records[index]),
+                                  selected: widget.selectedIds.contains(
+                                    widget.records[index].asset.photo.id,
+                                  ),
+                                  selecting: widget.selectedIds.isNotEmpty,
+                                  onTap: () {
+                                    if (widget.selectedIds.isNotEmpty) {
+                                      widget.onToggleSelection(
+                                        widget.records[index],
+                                      );
+                                    } else {
+                                      widget.onOpen(widget.records[index]);
+                                    }
+                                  },
+                                  onLongPress: () => widget.onStartSelection(
+                                    widget.records[index],
+                                  ),
                                   onToggleCherished: () =>
                                       widget.onToggleCherished(
                                         widget.records[index].asset.photo.id,
@@ -2242,7 +2376,10 @@ class _AppraisePhotoTile extends StatefulWidget {
     required this.aiResult,
     required this.displayWidth,
     required this.displayHeight,
-    required this.onOpen,
+    required this.selected,
+    required this.selecting,
+    required this.onTap,
+    required this.onLongPress,
     required this.onToggleCherished,
     required this.onThumbnailLoaded,
   });
@@ -2252,7 +2389,10 @@ class _AppraisePhotoTile extends StatefulWidget {
   final AppraiseAiPhotoResult? aiResult;
   final double displayWidth;
   final double displayHeight;
-  final VoidCallback onOpen;
+  final bool selected;
+  final bool selecting;
+  final VoidCallback onTap;
+  final VoidCallback onLongPress;
   final VoidCallback onToggleCherished;
   final void Function(String photoId, String thumbnailPath) onThumbnailLoaded;
 
@@ -2267,33 +2407,46 @@ class _AppraisePhotoTileState extends State<_AppraisePhotoTile> {
   Widget build(BuildContext context) {
     final score =
         widget.aiResult?.totalScore ?? widget.record.asset.photo.appraisalScore;
+    final borderRadius = BorderRadius.circular(9);
+    final selectedBorder = widget.selected
+        ? Border.all(color: widget.palette.ink, width: 1.6)
+        : null;
     return Semantics(
       image: true,
       label: widget.record.asset.displayName,
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
-        onTap: widget.onOpen,
+        onTap: widget.onTap,
+        onLongPress: widget.onLongPress,
         onTapDown: (_) => setState(() => _pressed = true),
         onTapCancel: () => setState(() => _pressed = false),
         onTapUp: (_) => setState(() => _pressed = false),
         child: AnimatedScale(
           duration: const Duration(milliseconds: 150),
           curve: Curves.easeOut,
-          scale: _pressed ? 0.985 : 1,
+          scale: widget.selected ? 0.955 : (_pressed ? 0.985 : 1),
           child: DecoratedBox(
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(9),
+              borderRadius: borderRadius,
               boxShadow: [
                 BoxShadow(
-                  color: widget.palette.cardShadow.withValues(alpha: 0.72),
+                  color: widget.palette.cardShadow.withValues(
+                    alpha: widget.selected ? 0.45 : 0.72,
+                  ),
                   blurRadius: widget.palette.tone == NoemaTone.dark ? 24 : 20,
                   offset: const Offset(0, 12),
                 ),
               ],
             ),
             child: ClipRRect(
-              borderRadius: BorderRadius.circular(9),
-              child: DecoratedBox(
+              borderRadius: borderRadius,
+              child: Container(
+                foregroundDecoration: selectedBorder == null
+                    ? null
+                    : BoxDecoration(
+                        borderRadius: borderRadius,
+                        border: selectedBorder,
+                      ),
                 decoration: BoxDecoration(
                   color: widget.palette.photoFallback,
                   border: Border.all(
@@ -2310,7 +2463,7 @@ class _AppraisePhotoTileState extends State<_AppraisePhotoTile> {
                       displayHeight: widget.displayHeight,
                       onThumbnailLoaded: widget.onThumbnailLoaded,
                     ),
-                    if (score case final score?)
+                    if (!widget.selecting && score != null)
                       Positioned(
                         top: 6,
                         left: 6,
@@ -2319,19 +2472,37 @@ class _AppraisePhotoTileState extends State<_AppraisePhotoTile> {
                           score: score,
                         ),
                       ),
-                    Positioned(
-                      top: 4,
-                      right: 4,
-                      child: NoemaPhotoWallHeartBadge(
-                        key: ValueKey(
-                          'appraise-photo-heart-${widget.record.asset.photo.id}',
+                    if (!widget.selecting)
+                      Positioned(
+                        top: 4,
+                        right: 4,
+                        child: NoemaPhotoWallHeartBadge(
+                          key: ValueKey(
+                            'appraise-photo-heart-${widget.record.asset.photo.id}',
+                          ),
+                          palette: widget.palette,
+                          cherished: widget.record.cherished,
+                          onTap: widget.onToggleCherished,
+                          tooltip: widget.record.cherished ? '取消珍藏' : '珍藏',
                         ),
-                        palette: widget.palette,
-                        cherished: widget.record.cherished,
-                        onTap: widget.onToggleCherished,
-                        tooltip: widget.record.cherished ? '取消珍藏' : '珍藏',
                       ),
-                    ),
+                    if (widget.selecting)
+                      AnimatedContainer(
+                        duration: const Duration(milliseconds: 140),
+                        color: widget.selected
+                            ? Colors.black.withValues(alpha: 0.10)
+                            : Colors.black.withValues(alpha: 0.38),
+                      ),
+                    if (widget.selected)
+                      Positioned(
+                        top: 5,
+                        right: 5,
+                        child: Icon(
+                          Icons.check_circle_rounded,
+                          color: widget.palette.ink,
+                          size: 19,
+                        ),
+                      ),
                   ],
                 ),
               ),
@@ -2469,6 +2640,7 @@ class _AppraiseViewerOverlay extends StatefulWidget {
     required this.onAiSettingsChanged,
     required this.onCheckAiSettings,
     required this.onRunAi,
+    required this.onRemovePhoto,
     required this.onSheetFractionChanged,
     super.key,
     this.initialSheetFraction = _appraiseViewerSheetHiddenFraction,
@@ -2488,6 +2660,7 @@ class _AppraiseViewerOverlay extends StatefulWidget {
   final Future<AppraiseAiCheckResult> Function(AppraiseAiSettings)
   onCheckAiSettings;
   final Future<AppraiseAiPhotoResult> Function() onRunAi;
+  final Future<bool> Function(String photoId)? onRemovePhoto;
   final ValueChanged<double> onSheetFractionChanged;
   final double initialSheetFraction;
   final double? autoOpenSheetFraction;
@@ -2639,6 +2812,7 @@ class _AppraiseViewerOverlayState extends State<_AppraiseViewerOverlay>
         : _visibleMetrics(result);
     final localBasisSignals = _appraiseLocalBasisSignals(widget.record);
     final strings = NoemaStrings.of(context);
+    final sceneLayout = NoemaSceneMetrics.layoutOf(context);
     final categoryLabel = _appraiseCategoryLabel(
       strings,
       widget.record,
@@ -2654,7 +2828,7 @@ class _AppraiseViewerOverlayState extends State<_AppraiseViewerOverlay>
     return Stack(
       children: [
         Positioned(
-          right: NoemaSceneMetrics.sideInset + 2,
+          right: sceneLayout.sideInset + 2,
           bottom: viewportHeight * sheetFraction + 12,
           child: _AppraiseViewerIndex(index: widget.index, total: widget.total),
         ),
@@ -2713,6 +2887,9 @@ class _AppraiseViewerOverlayState extends State<_AppraiseViewerOverlay>
                                     _AppraiseSheetHeader(
                                       palette: palette,
                                       record: widget.record,
+                                      onRemove: widget.onRemovePhoto == null
+                                          ? null
+                                          : _removeCurrentPhoto,
                                     ),
                                     const SizedBox(height: 14),
                                     _AppraiseLocalBasis(
@@ -2892,6 +3069,18 @@ class _AppraiseViewerOverlayState extends State<_AppraiseViewerOverlay>
     }
   }
 
+  Future<void> _removeCurrentPhoto() async {
+    final onRemovePhoto = widget.onRemovePhoto;
+    if (onRemovePhoto == null) {
+      return;
+    }
+    final removed = await onRemovePhoto(widget.record.asset.photo.id);
+    if (!mounted || !removed) {
+      return;
+    }
+    Navigator.of(context).maybePop();
+  }
+
   void _handleAiSettingsChanged(AppraiseAiSettingsLibrary settingsLibrary) {
     setState(() {
       _aiSettingsLibrary = settingsLibrary;
@@ -2922,6 +3111,31 @@ class _AppraiseViewerOverlayState extends State<_AppraiseViewerOverlay>
       onConfigure: () => setState(() => _settingsOpen = true),
     );
   }
+}
+
+Future<bool> _confirmRemoveAppraisePhoto({
+  required BuildContext context,
+  required NoemaPalette palette,
+  required ReviewWorkspaceController workspaceController,
+  required String photoId,
+}) async {
+  final choice = await showNoemaRemoveAssetsDialog(
+    context: context,
+    palette: palette,
+    canDeleteSystemPhoto: workspaceController.canDeleteSystemMediaForAssetIds({
+      photoId,
+    }),
+  );
+  if (choice == null || !context.mounted) {
+    return false;
+  }
+
+  return removeNoemaAssetsWithChoice(
+    context: context,
+    workspaceController: workspaceController,
+    photoIds: {photoId},
+    choice: choice,
+  );
 }
 
 class _VisibleAppraiseMetric {
@@ -3970,15 +4184,23 @@ class _AppraiseSheetSurface extends StatelessWidget {
 }
 
 class _AppraiseSheetHeader extends StatelessWidget {
-  const _AppraiseSheetHeader({required this.palette, required this.record});
+  const _AppraiseSheetHeader({
+    required this.palette,
+    required this.record,
+    this.onRemove,
+  });
 
   final NoemaPalette palette;
   final _AppraiseRecord record;
+  final VoidCallback? onRemove;
 
   @override
   Widget build(BuildContext context) {
     final meta = _appraisePhotoMeta(record);
-    final height = meta.isEmpty ? 0.0 : (meta.hasBoth ? 116.0 : 93.0);
+    final hasRemove = onRemove != null;
+    final height = meta.isEmpty
+        ? (hasRemove ? 72.0 : 0.0)
+        : (meta.hasBoth ? 116.0 : 93.0);
     return SizedBox(
       width: double.infinity,
       height: height,
@@ -3988,7 +4210,7 @@ class _AppraiseSheetHeader extends StatelessWidget {
           if (!meta.isEmpty)
             Positioned(
               left: 0,
-              right: 0,
+              right: hasRemove ? 48 : 0,
               top: 50,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -3997,6 +4219,15 @@ class _AppraiseSheetHeader extends StatelessWidget {
                   const SizedBox(height: 12),
                   _AppraiseSheetMetaRule(palette: palette),
                 ],
+              ),
+            ),
+          if (onRemove case final onRemove?)
+            Positioned(
+              right: 0,
+              top: meta.isEmpty ? 26 : 44,
+              child: _AppraiseSheetRemoveButton(
+                palette: palette,
+                onTap: onRemove,
               ),
             ),
         ],
@@ -4224,6 +4455,51 @@ class _AppraiseSvgIcon extends StatelessWidget {
         fit: BoxFit.contain,
         colorFilter: ColorFilter.mode(color, BlendMode.srcIn),
         excludeFromSemantics: true,
+      ),
+    );
+  }
+}
+
+class _AppraiseSheetRemoveButton extends StatelessWidget {
+  const _AppraiseSheetRemoveButton({
+    required this.palette,
+    required this.onTap,
+  });
+
+  final NoemaPalette palette;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = _appraiseSheetStageColors(palette);
+    final dangerColor = palette.tone == NoemaTone.dark
+        ? const Color(0xFFE1A39B)
+        : const Color(0xFF8D3028);
+
+    return Tooltip(
+      message: NoemaStrings.of(context).remove,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        child: AnimatedContainer(
+          key: const ValueKey('appraise-viewer-sheet-remove'),
+          duration: const Duration(milliseconds: 160),
+          curve: Curves.easeOut,
+          width: 34,
+          height: 34,
+          decoration: BoxDecoration(
+            color: colors.top.withValues(alpha: 0.70),
+            borderRadius: BorderRadius.circular(999),
+            border: Border.all(color: dangerColor.withValues(alpha: 0.62)),
+          ),
+          child: Center(
+            child: Icon(
+              Icons.delete_outline_rounded,
+              size: 17,
+              color: dangerColor.withValues(alpha: 0.86),
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -5212,7 +5488,10 @@ class _AppraiseAiHintPanelState extends State<_AppraiseAiHintPanel> {
       await _appraiseExternalLinksChannel.invokeMethod<void>('openUrl', {
         'url': url,
       });
-    } on PlatformException catch (_) {
+    } catch (error) {
+      if (!isAppraiseExternalLinkOpenFailure(error)) {
+        rethrow;
+      }
       if (!mounted) {
         return;
       }
@@ -5286,6 +5565,9 @@ class _AppraiseAiHintPanelState extends State<_AppraiseAiHintPanel> {
     final palette = widget.palette;
     final strings = NoemaStrings.of(context);
     final providerOption = appraiseAiProviderOptionFor(_settings.provider);
+    final sceneLayout = NoemaSceneMetrics.layoutOf(context);
+    final topBarTop = sceneLayout.topBarTop;
+    final topShift = sceneLayout.topSafeShift;
     return Theme(
       data: _appraiseSettingsMaterialTheme(context, palette),
       child: Material(
@@ -5296,23 +5578,23 @@ class _AppraiseAiHintPanelState extends State<_AppraiseAiHintPanel> {
             clipBehavior: Clip.none,
             children: [
               Positioned(
-                left: NoemaSceneMetrics.markLeft,
+                left: sceneLayout.markLeft,
                 top: NoemaSceneMetrics.markTop,
                 child: NoemaThemeMark(palette: palette, mark: '赋'),
               ),
               Positioned(
-                left: NoemaSceneMetrics.topBarInset,
-                right: NoemaSceneMetrics.topBarInset,
-                top: NoemaSceneMetrics.topBarTop,
+                left: sceneLayout.topBarInset,
+                right: sceneLayout.topBarInset,
+                top: topBarTop,
                 child: _AppraiseAiSettingsTopBar(
                   palette: palette,
                   onBack: widget.onClose,
                 ),
               ),
               Positioned(
-                left: NoemaSceneMetrics.sideInset,
-                right: NoemaSceneMetrics.sideInset,
-                top: 116,
+                left: sceneLayout.sideInset,
+                right: sceneLayout.sideInset,
+                top: 116 + topShift,
                 bottom: 0,
                 child: Stack(
                   children: [

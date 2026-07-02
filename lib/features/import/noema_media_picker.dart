@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:noema/core/models/photo_asset.dart';
+import 'package:noema/features/import/noema_cached_file_deleter.dart';
 import 'package:noema/features/import/selected_gallery_asset.dart';
 
 const String noemaMediaPickerChannelName = 'noema/media_picker';
@@ -53,6 +54,14 @@ class NoemaMediaPicker {
 
   static bool get isAndroidSupported {
     return !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
+  }
+
+  static bool get isIOSSupported {
+    return !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
+  }
+
+  static bool get isNativePickerSupported {
+    return isAndroidSupported || isIOSSupported;
   }
 
   Future<NoemaGalleryAccess> galleryAccessStatus() async {
@@ -157,10 +166,30 @@ class NoemaMediaPicker {
       });
       return _positiveIntValue(result) ?? 0;
     } on MissingPluginException {
-      return 0;
+      return deleteNoemaLocalCachedFiles(uniquePaths);
     } on PlatformException {
-      return 0;
+      return deleteNoemaLocalCachedFiles(uniquePaths);
     }
+  }
+
+  Future<bool> deleteSystemMediaItems(Iterable<String> uris) async {
+    final uniqueUris = {
+      for (final uri in uris)
+        if (uri.trim().isNotEmpty) uri.trim(),
+    }.toList(growable: false);
+    if (uniqueUris.isEmpty) {
+      return false;
+    }
+    final result = await _channel.invokeMethod<Object?>('deleteMediaItems', {
+      'uris': uniqueUris,
+    });
+    if (result is bool) {
+      return result;
+    }
+    if (result is Map<Object?, Object?>) {
+      return _boolValue(result['deleted']) ?? false;
+    }
+    return false;
   }
 
   Future<String?> _sharedCachedImageRequest({
@@ -237,6 +266,13 @@ PhotoExif? _exifValue(Map<Object?, Object?> map) {
 
 String? _stringValue(Object? value) {
   if (value is String && value.trim().isNotEmpty) {
+    return value;
+  }
+  return null;
+}
+
+bool? _boolValue(Object? value) {
+  if (value is bool) {
     return value;
   }
   return null;

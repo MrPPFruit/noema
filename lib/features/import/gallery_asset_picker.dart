@@ -15,18 +15,28 @@ typedef GalleryAssetPicker =
 Future<List<SelectedGalleryAsset>> pickGalleryAssets(
   BuildContext context,
 ) async {
-  if (NoemaMediaPicker.isAndroidSupported) {
+  if (NoemaMediaPicker.isNativePickerSupported) {
     try {
       const mediaPicker = NoemaMediaPicker();
-      final access = await mediaPicker.requestGalleryAccess();
-      if (!access.canReadMedia) {
-        throw const NoemaGalleryAccessDeniedException();
+      if (NoemaMediaPicker.isAndroidSupported) {
+        final access = await mediaPicker.requestGalleryAccess();
+        if (!access.canReadMedia) {
+          throw const NoemaGalleryAccessDeniedException();
+        }
+        unawaited(_ignoreGalleryWarmup(mediaPicker.refreshGalleryIndex()));
+        unawaited(_ignoreGalleryWarmup(mediaPicker.warmGalleryThumbnails()));
       }
-      unawaited(_ignoreGalleryWarmup(mediaPicker.refreshGalleryIndex()));
-      unawaited(_ignoreGalleryWarmup(mediaPicker.warmGalleryThumbnails()));
       return mediaPicker.pickImages(limit: galleryPickerLimit);
     } on MissingPluginException {
-      // Fall through to image_picker for tests or older app shells.
+      if (NoemaMediaPicker.isIOSSupported) {
+        rethrow;
+      }
+      // Fall through to image_picker for Android tests or older app shells.
+    } on PlatformException catch (error) {
+      if (!NoemaMediaPicker.isIOSSupported ||
+          error.code != 'photo_picker_unavailable') {
+        rethrow;
+      }
     }
   }
 
