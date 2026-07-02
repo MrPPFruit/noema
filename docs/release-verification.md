@@ -10,7 +10,7 @@
 - GitHub Release 类型：draft、pre-release 或正式 release。
 - 是否上传 APK。
 - 是否需要 signed tag。
-- 是否仍使用 `v0.1.0-beta.1` 作为首次公开版本。
+- 是否使用当前计划的公开版本号与 Android `versionCode`。
 - 本机是否已准备 `android/key.properties` 和对应 release keystore。
 
 ## 本地验证
@@ -50,3 +50,11 @@ shasum -a 256 noema-android-vX.Y.Z-release.apk
 release notes 应包含 APK 文件名、SHA256、Android package name 和已知限制。
 
 如果没有 `android/key.properties`，`flutter build apk --release` 可能仍可产出本地 debug-signed release 包；该产物不能上传到官方 GitHub Release。
+
+发布前必须用 `apksigner verify --print-certs` 确认官方 APK 使用 release 证书。`v0.1.0-beta.1` 与 `v0.1.0-beta.2` 的官方 release 证书 SHA-256 均为：
+
+```text
+efd6a866212defcbd40d1d94bc81e59374ebceef12a2565b515b54ee5d504aa1
+```
+
+如果测试机曾安装内部/debug 构建，Android 可能因为签名不一致拒绝覆盖安装。这不代表官方 release 证书变化，应先对比已发布 APK 和当前 APK 的证书指纹。

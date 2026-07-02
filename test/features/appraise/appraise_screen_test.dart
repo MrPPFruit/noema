@@ -385,7 +385,7 @@ void main() {
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
-    final controller = _sampleWorkspaceController();
+    final controller = _sampleWorkspaceController(withSourceUris: true);
 
     await tester.pumpWidget(_AppraiseTestApp(controller: controller));
     await tester.pumpAndSettle();
@@ -426,7 +426,7 @@ void main() {
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
-    final controller = _sampleWorkspaceController();
+    final controller = _sampleWorkspaceController(withSourceUris: true);
 
     await tester.pumpWidget(_AppraiseTestApp(controller: controller));
     await tester.pumpAndSettle();
@@ -1679,6 +1679,7 @@ ReviewWorkspaceController _sampleWorkspaceController({
   bool withPreviewBytes = false,
   Uint8List? analysisBytes,
   bool withDimensions = false,
+  bool withSourceUris = false,
   PhotoExif? exif,
 }) {
   final controller = ReviewWorkspaceController();
@@ -1688,6 +1689,9 @@ ReviewWorkspaceController _sampleWorkspaceController({
       (index) => SelectedGalleryAsset(
         id: 'sample-${index + 1}',
         name: 'Sample ${(index + 1).toString().padLeft(2, '0')}',
+        sourceUri: withSourceUris
+            ? 'content://media/photo/${index + 1}'
+            : null,
         previewBytes: withPreviewBytes ? _tinyPngBytes : null,
         analysisBytes: analysisBytes,
         mimeType: withPreviewBytes ? 'image/png' : null,

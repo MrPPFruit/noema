@@ -923,7 +923,7 @@ void main() {
   testWidgets('long press selects photos and removes them from observe', (
     tester,
   ) async {
-    final controller = _sampleObserveController();
+    final controller = _sampleObserveController(withSourceUris: true);
 
     await tester.pumpWidget(_ObserveTestApp(controller: controller));
     await _pumpObserveUi(tester);
@@ -1416,7 +1416,9 @@ class _ObserveTestApp extends StatelessWidget {
   }
 }
 
-ReviewWorkspaceController _sampleObserveController() {
+ReviewWorkspaceController _sampleObserveController({
+  bool withSourceUris = false,
+}) {
   final controller = ReviewWorkspaceController();
   final capturedAt = DateTime(2026, 6, 3, 10);
   controller.loadSelectedAssets(
@@ -1425,6 +1427,9 @@ ReviewWorkspaceController _sampleObserveController() {
       (index) => SelectedGalleryAsset(
         id: 'sample-${index + 1}',
         name: 'Sample ${(index + 1).toString().padLeft(2, '0')}',
+        sourceUri: withSourceUris
+            ? 'content://media/photo/${index + 1}'
+            : null,
         width: 4032,
         height: 3024,
         createdAt: index == 1

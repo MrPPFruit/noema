@@ -6,6 +6,15 @@
 
 - 暂无。
 
+## v0.1.0-beta.2 - 2026-07-02
+
+- 新增 `鉴` 页面长按选择、删除和批量删除照片。
+- 新增照片详情 sheet 中的单张删除入口。
+- 统一删除确认弹窗，与既有删除体验保持一致。
+- Android 删除流程支持仅从 Noema 移除，或在用户确认后同时删除系统相册原图。
+- 修正 Android release 构建签名配置，本地 release keystore 存在时使用官方 release 证书。
+- 更新 Android release 版本号到 `0.1.0-beta.2+12`。
+
 ## v0.1.0-beta.1 - 2026-07-01
 
 - 发布首次公开 GitHub pre-release，并提供 release-signed Android APK 与 SHA256 校验信息。
@@ -22,8 +31,8 @@
 
 当前公开 release 采用：
 
-- tag：`v0.1.0-beta.1`。
-- App version：`0.1.0-beta.1+11`。
+- tag：`v0.1.0-beta.2`。
+- App version：`0.1.0-beta.2+12`。
 - release 类型：GitHub pre-release。
 - APK：上传 release-signed APK。
 - SHA256：提供 `SHA256SUMS.txt`。

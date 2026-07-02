@@ -450,7 +450,7 @@ void main() {
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
 
-    final controller = _controller();
+    final controller = _controller(sourceUri: 'content://media/photo/1');
 
     await tester.pumpWidget(
       MaterialApp(

@@ -175,6 +175,7 @@ void main() {
       SelectedGalleryAsset(
         id: 'asset-1',
         name: 'Photo 1',
+        sourceUri: 'content://media/external/images/media/1',
         width: 3024,
         height: 4032,
         createdAt: capturedAt,
@@ -182,6 +183,7 @@ void main() {
       SelectedGalleryAsset(
         id: 'asset-2',
         name: 'Photo 2',
+        sourceUri: 'content://media/external/images/media/2',
         width: 3024,
         height: 4032,
         createdAt: capturedAt.add(const Duration(seconds: 2)),
@@ -189,6 +191,7 @@ void main() {
       SelectedGalleryAsset(
         id: 'asset-3',
         name: 'Photo 3',
+        sourceUri: 'content://media/external/images/media/3',
         width: 3024,
         height: 4032,
         createdAt: capturedAt.add(const Duration(seconds: 4)),
@@ -196,6 +199,7 @@ void main() {
       SelectedGalleryAsset(
         id: 'asset-4',
         name: 'Photo 4',
+        sourceUri: 'content://media/external/images/media/4',
         width: 3024,
         height: 4032,
         createdAt: capturedAt.add(const Duration(seconds: 6)),
